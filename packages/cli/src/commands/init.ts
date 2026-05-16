@@ -46,6 +46,7 @@ const SOUL_HOOKS_CONFIG = {
     {
       matcher: "",
       hooks: [
+        { type: "command", command: "npx claude-soul-on-stop", timeout: 15000 },
         { type: "command", command: `bash ${HOOKS_DIR}/session-journal.sh`, timeout: 3000 },
         { type: "command", command: `node ${HOOKS_DIR}/session-agency.js`, timeout: 10000 },
       ],

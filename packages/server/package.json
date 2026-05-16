@@ -1,12 +1,13 @@
 {
   "name": "claude-soul-server",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Self-improving learning engine for Claude Code — persistent identity, cross-session memory, and evolving cognitive frameworks",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "claude-soul-server": "dist/index.js"
+    "claude-soul-server": "dist/index.js",
+    "claude-soul-on-stop": "dist/hooks/on-stop.js"
   },
   "scripts": {
     "build": "tsc",

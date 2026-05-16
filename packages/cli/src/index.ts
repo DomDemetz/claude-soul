@@ -10,7 +10,7 @@ const program = new Command();
 program
   .name("claude-soul")
   .description("Give Claude Code a soul — persistent identity, cross-session learning, and evolving cognitive frameworks")
-  .version("0.1.3");
+  .version("0.1.4");
 
 program
   .command("init")
