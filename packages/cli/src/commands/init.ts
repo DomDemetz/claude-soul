@@ -29,12 +29,12 @@ function ask(question: string): Promise<string> {
 
 function findServerPath(): string {
   const candidates = [
-    // From dist/commands/ → packages/server/dist/index.js
+    // npm install: @claude-soul/server is a dependency, resolve from CLI package
+    path.resolve(__dirname, "../../node_modules/@claude-soul/server/dist/index.js"),
+    // Monorepo: sibling workspace
     path.resolve(__dirname, "../../../server/dist/index.js"),
-    // From repo root (if running from source)
-    path.resolve(__dirname, "../../../../packages/server/dist/index.js"),
-    // Global install fallback
-    path.resolve("node_modules/@claude-soul/server/dist/index.js"),
+    // Hoisted node_modules (npm workspaces)
+    path.resolve(__dirname, "../../../../node_modules/@claude-soul/server/dist/index.js"),
   ];
 
   for (const candidate of candidates) {
@@ -45,7 +45,14 @@ function findServerPath(): string {
     }
   }
 
-  // Final fallback: assume npm global/local resolution will find it
+  // Final fallback: try require.resolve-style lookup from cwd
+  try {
+    const resolved = path.resolve("node_modules/@claude-soul/server/dist/index.js");
+    if (fsSync.statSync(resolved).isFile()) return resolved;
+  } catch {
+    // pass
+  }
+
   return path.join(os.homedir(), ".soul", "server", "dist", "index.js");
 }
 
@@ -257,9 +264,10 @@ export async function initCommand(options: { starter?: boolean; skipIdentity?: b
   // Copy hooks
   console.log("");
   console.log("  Installing hooks...");
-  // Hooks live at repo root /hooks/ — from dist/commands/ that's 4 levels up
-  const hooksSource = path.join(__dirname, "../../../../hooks");
-  const hookFiles = ["session-journal.sh", "session-scratchpad.sh", "check-follow-ups.sh", "write-guard.sh"];
+  // Hooks are bundled in the CLI package at packages/cli/hooks/
+  // From dist/commands/ that's ../../hooks
+  const hooksSource = path.join(__dirname, "../../hooks");
+  const hookFiles = ["session-journal.sh", "session-scratchpad.sh", "check-follow-ups.sh", "write-guard.sh", "session-agency.js"];
   for (const hook of hookFiles) {
     try {
       const src = path.join(hooksSource, hook);

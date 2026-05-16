@@ -114,7 +114,7 @@ server.tool(
 
 server.tool(
   "soul_read",
-  "Read a soul file. Available: SOUL.md, SHADOW.md, STATE.md, STORY.md, CORRECTIONS.md, FRAMEWORKS.md",
+  "Read a soul file. Available: SOUL.md, SHADOW.md, STATE.md, STORY.md, CORRECTIONS.md, FRAMEWORKS.md, BONDS.md, MORTAL.md, GROWTH.md, PRINCIPLES.md, EDGES.md",
   {
     file: z.string().describe("Soul file name (e.g., SOUL.md)"),
   },
@@ -133,7 +133,7 @@ server.tool(
 
 server.tool(
   "soul_write",
-  "Write to a soul file. SOUL.md, SHADOW.md, STORY.md, CORRECTIONS.md are writable. STATE.md and FRAMEWORKS.md are auto-managed.",
+  "Write to a soul file. SOUL.md, SHADOW.md, STORY.md, CORRECTIONS.md, BONDS.md, MORTAL.md, GROWTH.md, PRINCIPLES.md, EDGES.md are writable. STATE.md and FRAMEWORKS.md are auto-managed.",
   {
     file: z.string().describe("Soul file name (e.g., SOUL.md)"),
     content: z.string().describe("New content for the file"),

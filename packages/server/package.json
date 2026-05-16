@@ -24,7 +24,15 @@
     "identity",
     "ai"
   ],
+  "author": "DomDemetz",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DomDemetz/claude-soul"
+  },
   "license": "MIT",
+  "files": [
+    "dist"
+  ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1"
   },
