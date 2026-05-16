@@ -19,18 +19,10 @@ Memory plugins store what happened. Claude Soul develops *how to think*.
 ## Quick start
 
 ```bash
-# Clone and build
-git clone https://github.com/DomDemetz/claude-soul.git
-cd claude-soul && npm install && npm run build
-
-# Run the setup wizard
-node packages/cli/dist/index.js init
-
-# Or register manually:
-claude mcp add --scope user claude-soul -- node $(pwd)/packages/server/dist/index.js
+npx claude-soul init
 ```
 
-The init wizard creates `~/.soul/`, writes your identity files, registers the MCP server, and installs hooks. Then add this to your CLAUDE.md:
+That's it. The wizard creates `~/.soul/`, writes your identity files, registers the MCP server, and installs hooks. Then add this to your CLAUDE.md:
 
 ```markdown
 ## Soul System
