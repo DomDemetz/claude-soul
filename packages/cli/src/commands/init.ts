@@ -16,6 +16,7 @@ const HOOKS_DIR = path.join(SOUL_DIR, "hooks");
 const JOURNALS_DIR = path.join(SOUL_DIR, "journals");
 const REFLECTIONS_DIR = path.join(SOUL_DIR, "reflections");
 const SNAPSHOTS_DIR = path.join(DATA_DIR, "snapshots");
+const CLAUDE_SETTINGS_PATH = path.join(os.homedir(), ".claude", "settings.json");
 
 function ask(question: string): Promise<string> {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
@@ -38,6 +39,77 @@ function findServerCommand(): string {
 
   // Published path: use npx to resolve the server package
   return "npx claude-soul-server";
+}
+
+const SOUL_HOOKS_CONFIG = {
+  Stop: [
+    {
+      matcher: "",
+      hooks: [
+        { type: "command", command: `bash ${HOOKS_DIR}/session-journal.sh`, timeout: 3000 },
+        { type: "command", command: `node ${HOOKS_DIR}/session-agency.js`, timeout: 10000 },
+      ],
+    },
+  ],
+  PostToolUse: [
+    {
+      matcher: "",
+      hooks: [
+        { type: "command", command: `bash ${HOOKS_DIR}/session-scratchpad.sh`, timeout: 2000 },
+      ],
+    },
+  ],
+  PreToolUse: [
+    {
+      matcher: "Write|Edit",
+      hooks: [
+        { type: "command", command: `bash ${HOOKS_DIR}/write-guard.sh`, timeout: 2000 },
+      ],
+    },
+  ],
+};
+
+async function registerHooks(): Promise<void> {
+  // Ensure ~/.claude/ exists
+  await fs.mkdir(path.dirname(CLAUDE_SETTINGS_PATH), { recursive: true });
+
+  // Read existing settings or start fresh
+  let settings: Record<string, any> = {};
+  try {
+    const raw = await fs.readFile(CLAUDE_SETTINGS_PATH, "utf-8");
+    settings = JSON.parse(raw);
+  } catch {
+    // No existing settings file
+  }
+
+  if (!settings.hooks) settings.hooks = {};
+
+  // Merge soul hooks into each event type without duplicating
+  for (const [event, entries] of Object.entries(SOUL_HOOKS_CONFIG)) {
+    if (!settings.hooks[event]) {
+      settings.hooks[event] = entries;
+    } else {
+      // Check if soul hooks are already registered (by command substring)
+      for (const entry of entries as any[]) {
+        for (const hook of entry.hooks) {
+          const alreadyExists = settings.hooks[event].some((existing: any) =>
+            existing.hooks?.some((h: any) => h.command === hook.command)
+          );
+          if (!alreadyExists) {
+            // Find matching matcher group or create new one
+            const matchingGroup = settings.hooks[event].find((e: any) => e.matcher === entry.matcher);
+            if (matchingGroup) {
+              matchingGroup.hooks.push(hook);
+            } else {
+              settings.hooks[event].push(entry);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  await fs.writeFile(CLAUDE_SETTINGS_PATH, JSON.stringify(settings, null, 2));
 }
 
 async function checkPrerequisites(): Promise<boolean> {
@@ -278,6 +350,17 @@ export async function initCommand(options: { starter?: boolean; skipIdentity?: b
     }
   }
   console.log("  [ok] Hooks installed to ~/.soul/hooks/");
+
+  // Register hooks in Claude Code settings
+  console.log("");
+  console.log("  Registering hooks with Claude Code...");
+  try {
+    await registerHooks();
+    console.log("  [ok] Hooks registered in ~/.claude/settings.json");
+  } catch (err) {
+    console.log("  [!] Could not auto-register hooks.");
+    console.log("      You can add them manually — see docs/configuration.md");
+  }
 
   // Print CLAUDE.md snippet
   console.log("");
