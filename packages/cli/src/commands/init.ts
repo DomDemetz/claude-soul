@@ -5,9 +5,11 @@ import os from "node:os";
 import { execSync } from "node:child_process";
 import readline from "node:readline";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const require = createRequire(import.meta.url);
 
 const SOUL_DIR = path.join(os.homedir(), ".soul");
 const DATA_DIR = path.join(SOUL_DIR, "data");
@@ -28,17 +30,40 @@ function ask(question: string): Promise<string> {
   });
 }
 
-function findServerCommand(): string {
-  // In monorepo dev: try to find the built server directly
-  const monorepoPath = path.resolve(__dirname, "../../../server/dist/index.js");
+// Resolve an entry point shipped by the `claude-soul-server` package.
+//
+// `claude-soul-server` is a workspace dependency of this CLI, so once the CLI
+// is installed (from npm or in the monorepo) the server's built files are
+// resolvable via Node's module resolution. We deliberately avoid `npx
+// claude-soul-server` / `npx claude-soul-on-stop`: those bin names are only
+// addressable if the server package is published to the registry under its
+// own name, which it is not -- relying on them produces hard `npm 404` errors
+// at hook/MCP runtime. See https://github.com/DomDemetz/claude-soul/issues.
+function resolveServerEntry(relativeEntry: string, npxFallback: string): string {
+  // Monorepo dev: built server lives alongside the CLI package.
+  const monorepoPath = path.resolve(__dirname, "../../../server", relativeEntry);
   try {
     if (fsSync.statSync(monorepoPath).isFile()) return `node ${monorepoPath}`;
   } catch {
-    // not in monorepo
+    // not in a monorepo checkout
   }
 
-  // Published path: use npx to resolve the server package
-  return "npx claude-soul-server";
+  // Published / installed path: resolve through the declared dependency.
+  try {
+    return `node ${require.resolve(`claude-soul-server/${relativeEntry}`)}`;
+  } catch {
+    // dependency not installed (degraded) -- fall back to npx as a last resort
+  }
+
+  return npxFallback;
+}
+
+function findServerCommand(): string {
+  return resolveServerEntry("dist/index.js", "npx claude-soul-server");
+}
+
+function findOnStopCommand(): string {
+  return resolveServerEntry("dist/hooks/on-stop.js", "npx claude-soul-on-stop");
 }
 
 const SOUL_HOOKS_CONFIG = {
@@ -46,7 +71,7 @@ const SOUL_HOOKS_CONFIG = {
     {
       matcher: "",
       hooks: [
-        { type: "command", command: "npx claude-soul-on-stop", timeout: 15000 },
+        { type: "command", command: findOnStopCommand(), timeout: 15000 },
         { type: "command", command: `bash ${HOOKS_DIR}/session-journal.sh`, timeout: 3000 },
         { type: "command", command: `node ${HOOKS_DIR}/session-agency.js`, timeout: 10000 },
       ],
