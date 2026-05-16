@@ -249,6 +249,18 @@ export async function initCommand(options: { starter?: boolean; skipIdentity?: b
   await fs.writeFile(path.join(SOUL_DIR, "config.json"), JSON.stringify(DEFAULT_CONFIG, null, 2));
   console.log("  [ok] SOUL.md, SHADOW.md, STORY.md, CORRECTIONS.md, config.json");
 
+  // Write starter data if requested
+  if (options.starter) {
+    console.log("");
+    console.log("  Writing starter pack (pre-evolved frameworks)...");
+    const { STARTER_FRAMEWORKS, STARTER_LESSONS, STARTER_META, STARTER_TENSIONS } = await import("../starter-data.js");
+    await fs.writeFile(path.join(DATA_DIR, "frameworks.json"), JSON.stringify(STARTER_FRAMEWORKS, null, 2));
+    await fs.writeFile(path.join(DATA_DIR, "lessons.json"), JSON.stringify(STARTER_LESSONS, null, 2));
+    await fs.writeFile(path.join(DATA_DIR, "meta.json"), JSON.stringify(STARTER_META, null, 2));
+    await fs.writeFile(path.join(DATA_DIR, "tensions.json"), JSON.stringify(STARTER_TENSIONS, null, 2));
+    console.log("  [ok] 12 frameworks (6 active, 6 questioning), 5 lessons, 1 tension");
+  }
+
   // Register MCP server
   console.log("");
   console.log("  Registering MCP server...");
