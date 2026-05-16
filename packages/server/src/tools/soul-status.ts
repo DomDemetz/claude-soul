@@ -18,7 +18,7 @@ async function checkHealth(): Promise<string[]> {
     const files = await fs.readdir(path.join(soulDir, "files"));
     ok.push(`Soul files: ${files.length} files`);
   } catch {
-    issues.push("~/.soul/files/ directory missing — run: node ~/soul-mcp-server/dist/setup.js");
+    issues.push("~/.soul/files/ directory missing — run: claude-soul init");
   }
 
   // Check hooks format in settings.json
@@ -28,7 +28,7 @@ async function checkHealth(): Promise<string[]> {
     const hooks = settings.hooks;
 
     if (!hooks) {
-      issues.push("No hooks configured — run: node ~/soul-mcp-server/dist/setup.js");
+      issues.push("No hooks configured — run: claude-soul init");
     } else {
       // Validate Stop hook format
       const stopHooks = hooks.Stop;
@@ -42,7 +42,7 @@ async function checkHealth(): Promise<string[]> {
         if (!first) {
           issues.push("Stop hook exists but soul hook not found");
         } else if (!first.hooks || !Array.isArray(first.hooks)) {
-          issues.push("Stop hook has WRONG FORMAT (missing hooks array) — run: node ~/soul-mcp-server/dist/setup.js");
+          issues.push("Stop hook has WRONG FORMAT — run: claude-soul init");
         } else {
           ok.push("Stop hook: configured correctly");
         }
@@ -58,7 +58,7 @@ async function checkHealth(): Promise<string[]> {
         if (soulPre && soulPre.hooks && Array.isArray(soulPre.hooks)) {
           ok.push("Write guard: configured correctly");
         } else if (soulPre) {
-          issues.push("Write guard has WRONG FORMAT — run: node ~/soul-mcp-server/dist/setup.js");
+          issues.push("Write guard has WRONG FORMAT — run: claude-soul init");
         }
       }
     }
@@ -66,13 +66,12 @@ async function checkHealth(): Promise<string[]> {
     issues.push("Cannot read ~/.claude/settings.json");
   }
 
-  // Check MCP server build
-  const serverPath = path.join(os.homedir(), "soul-mcp-server", "dist", "index.js");
+  // Check config exists
   try {
-    await fs.access(serverPath);
-    ok.push("MCP server: built");
+    await fs.access(path.join(soulDir, "config.json"));
+    ok.push("Config: present");
   } catch {
-    issues.push("MCP server not built — run: cd ~/soul-mcp-server && npm run build");
+    issues.push("config.json missing — run: claude-soul init");
   }
 
   const lines: string[] = [];
