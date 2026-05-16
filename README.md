@@ -19,10 +19,28 @@ Memory plugins store what happened. Claude Soul develops *how to think*.
 ## Quick start
 
 ```bash
-npx claude-soul init
+npx claude-soul init --starter
 ```
 
-That's it. The wizard creates `~/.soul/`, writes your identity files, registers the MCP server, and installs hooks. Then add this to your CLAUDE.md:
+That's it. The wizard creates `~/.soul/`, writes your identity files, registers the MCP server, and installs hooks. The `--starter` flag includes pre-evolved frameworks so you see the system working from session one (omit it for a blank slate).
+
+Then add this to your CLAUDE.md:
+
+**Prerequisites:** Node.js >= 18, Claude Code with a Max plan (for MCP support).
+
+### Install from source
+
+If you prefer building from source or want the latest (including `--starter`):
+
+```bash
+git clone https://github.com/DomDemetz/claude-soul.git
+cd claude-soul && npm install && npm run build
+node packages/cli/dist/index.js init --starter
+```
+
+### After install
+
+Add this to your CLAUDE.md (global or project-level):
 
 ```markdown
 ## Soul System
