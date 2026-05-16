@@ -45,8 +45,6 @@ npx claude-soul init --starter
 
 That's it. The wizard creates `~/.soul/`, writes your identity files, registers the MCP server, and installs hooks. The `--starter` flag includes pre-evolved frameworks so you see the system working from session one (omit it for a blank slate).
 
-Then add this to your CLAUDE.md:
-
 **Prerequisites:** Node.js >= 18, Claude Code (Pro or Max plan).
 
 ### Install from source
@@ -142,7 +140,7 @@ Frameworks advance through evidence. They can also be retired when contradicted,
 
 The system adjusts its learning cadence based on maturity:
 
-- **Apprentice** — Tight feedback loops. Quick reflections after 5 signals. Cast a wide net.
+- **Apprentice** — Tight feedback loops. Quick reflections after 20 signals. Cast a wide net.
 - **Creative** — Moderate cadence. Refine and merge. Build the latticework.
 - **Mastery** — Deliberate reflection. Fewer, more powerful frameworks. Meta-optimize.
 
@@ -150,7 +148,7 @@ The system adjusts its learning cadence based on maturity:
 
 | Tier | Trigger | Model | What it does |
 |------|---------|-------|-------------|
-| Quick | 5-20 signals | Haiku | Tests existing frameworks against recent signals |
+| Quick | ~20 signals | Haiku | Tests existing frameworks against recent signals |
 | Deep | 25-100 signals | Sonnet | Full analysis, discovers new frameworks, generates lessons |
 | Meta | Manual or auto | Sonnet | Audits framework coherence, detects redundancy, calibrates confidence |
 
@@ -262,7 +260,7 @@ Three principles:
 
 ## Contributing
 
-Contributions welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+Contributions welcome. Open an issue to discuss before submitting large PRs.
 
 ## License
 

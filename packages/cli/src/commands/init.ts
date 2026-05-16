@@ -27,33 +27,17 @@ function ask(question: string): Promise<string> {
   });
 }
 
-function findServerPath(): string {
-  const candidates = [
-    // npm install: @claude-soul/server is a dependency, resolve from CLI package
-    path.resolve(__dirname, "../../node_modules/@claude-soul/server/dist/index.js"),
-    // Monorepo: sibling workspace
-    path.resolve(__dirname, "../../../server/dist/index.js"),
-    // Hoisted node_modules (npm workspaces)
-    path.resolve(__dirname, "../../../../node_modules/@claude-soul/server/dist/index.js"),
-  ];
-
-  for (const candidate of candidates) {
-    try {
-      if (fsSync.statSync(candidate).isFile()) return candidate;
-    } catch {
-      continue;
-    }
-  }
-
-  // Final fallback: try require.resolve-style lookup from cwd
+function findServerCommand(): string {
+  // In monorepo dev: try to find the built server directly
+  const monorepoPath = path.resolve(__dirname, "../../../server/dist/index.js");
   try {
-    const resolved = path.resolve("node_modules/@claude-soul/server/dist/index.js");
-    if (fsSync.statSync(resolved).isFile()) return resolved;
+    if (fsSync.statSync(monorepoPath).isFile()) return `node ${monorepoPath}`;
   } catch {
-    // pass
+    // not in monorepo
   }
 
-  return path.join(os.homedir(), ".soul", "server", "dist", "index.js");
+  // Published path: use npx to resolve the server package
+  return "npx claude-soul-server";
 }
 
 async function checkPrerequisites(): Promise<boolean> {
@@ -267,13 +251,13 @@ export async function initCommand(options: { starter?: boolean; skipIdentity?: b
   // Register MCP server
   console.log("");
   console.log("  Registering MCP server...");
-  const serverPath = findServerPath();
+  const serverCmd = findServerCommand();
   try {
-    execSync(`claude mcp add --scope user claude-soul -- node ${serverPath}`, { stdio: "pipe" });
+    execSync(`claude mcp add --scope user claude-soul -- ${serverCmd}`, { stdio: "pipe" });
     console.log("  [ok] MCP server registered as 'claude-soul'");
   } catch (err) {
     console.log(`  [!] Could not auto-register MCP server.`);
-    console.log(`      Run manually: claude mcp add --scope user claude-soul -- node ${serverPath}`);
+    console.log(`      Run manually: claude mcp add --scope user claude-soul -- ${serverCmd}`);
   }
 
   // Copy hooks

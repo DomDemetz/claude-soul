@@ -1,6 +1,6 @@
 {
   "name": "claude-soul",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Give Claude Code a soul — persistent identity, cross-session learning, and evolving cognitive frameworks",
   "type": "module",
   "bin": {
