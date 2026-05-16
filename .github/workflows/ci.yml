@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 20, 22]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies
+        run: npm ci --workspace=packages/server --workspace=packages/cli
+
+      - name: Build server
+        run: npm run build --workspace=packages/server
+
+      - name: Build CLI
+        run: npm run build --workspace=packages/cli
+
+      - name: Run tests
+        run: npm test --workspace=packages/server --if-present

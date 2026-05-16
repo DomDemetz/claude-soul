@@ -1,0 +1,30 @@
+{
+  "name": "claude-soul",
+  "version": "0.1.0",
+  "description": "Give Claude Code a soul — persistent identity, cross-session learning, and evolving cognitive frameworks",
+  "type": "module",
+  "bin": {
+    "claude-soul": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "mcp",
+    "learning",
+    "persistence",
+    "identity",
+    "ai"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^12.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  }
+}

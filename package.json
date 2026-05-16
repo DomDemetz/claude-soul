@@ -1,0 +1,16 @@
+{
+  "name": "claude-soul-monorepo",
+  "private": true,
+  "workspaces": [
+    "packages/server",
+    "packages/cli"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces --if-present",
+    "clean": "rm -rf packages/*/dist"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
