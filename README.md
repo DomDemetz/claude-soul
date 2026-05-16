@@ -43,7 +43,13 @@ The system watches what works, reflects on patterns, and evolves its own cogniti
 npx claude-soul init --starter
 ```
 
-That's it. The wizard creates `~/.soul/`, writes your identity files, registers the MCP server, and installs hooks. The `--starter` flag includes pre-evolved frameworks so you see the system working from session one (omit it for a blank slate).
+That's it. The wizard creates `~/.soul/`, writes your identity files, registers the MCP server, and installs hooks. The `--starter` flag includes pre-evolved frameworks so you see the system working from session one.
+
+For a blank slate (discover your own frameworks from scratch):
+
+```bash
+npx claude-soul init
+```
 
 **Prerequisites:** Node.js >= 18, Claude Code (Pro or Max plan).
 
