@@ -47,7 +47,7 @@ That's it. The wizard creates `~/.soul/`, writes your identity files, registers 
 
 Then add this to your CLAUDE.md:
 
-**Prerequisites:** Node.js >= 18, Claude Code with a Max plan (for MCP support).
+**Prerequisites:** Node.js >= 18, Claude Code (Pro or Max plan).
 
 ### Install from source
 
@@ -69,7 +69,26 @@ Call `soul_context()` at the start of every conversation.
 Use `soul_reflect` when you have idle time.
 ```
 
-Then use Claude Code normally. The system works in the background:
+Then use Claude Code normally. The system works in the background.
+
+### Things you can say to Claude
+
+| What you want | What to say |
+|---|---|
+| Load identity + context | "load soul context" or "start with soul_context" |
+| Trigger a quick reflection | "reflect on recent sessions" or "run a quick reflection" |
+| Trigger a deep reflection | "do a deep reflection" |
+| Audit framework coherence | "run a meta reflection" |
+| Check system health | "what's your soul status?" |
+| Record something that worked | "signal: that approach worked well because..." |
+| Record something that failed | "signal: that was wrong, the issue was..." |
+| See active frameworks | "what frameworks are active?" |
+| Edit your identity | "update your SOUL.md to include..." |
+| See growth timeline | "read your STORY.md" |
+
+Reflections can also trigger automatically when enough signals accumulate (configurable thresholds in `~/.soul/config.json`).
+
+### What happens in the background
 
 1. **Signals** — automatically extracts learning signals from every conversation (corrections, confusion, success patterns)
 2. **Reflection** — periodically synthesizes signals into cognitive frameworks using an LLM
