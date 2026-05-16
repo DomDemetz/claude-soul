@@ -200,10 +200,7 @@ All settings in `~/.soul/config.json`:
 
 ## Cost
 
-Reflections use your Claude subscription via the CLI:
-- Quick reflection (Haiku): ~$0.002
-- Deep reflection (Sonnet): ~$0.01
-- A typical week with 20 sessions: ~$0.10 total
+Reflections run via `claude -p` (Claude Code's programmatic mode) — they use your existing Claude Code subscription. No separate API key or billing needed. A typical week adds ~20 short reflection calls, which is negligible within a Max plan's usage.
 
 ## Philosophy
 

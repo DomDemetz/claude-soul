@@ -161,14 +161,14 @@ Tensions are surfaced in context when relevant and tracked over time. Some resol
 
 ## Cost
 
-All LLM calls use `claude -p` (Claude Code's programmatic mode):
+All LLM calls use `claude -p` (Claude Code's programmatic mode), which runs on your existing Claude Code subscription (Max plan). No separate API key or billing.
 
-| Operation | Model | Approximate Cost |
+| Operation | Model | Subscription Impact |
 |-----------|-------|-----------------|
-| Quick reflection | Haiku | ~$0.002 |
-| Deep reflection | Sonnet | ~$0.01 |
-| Meta reflection | Sonnet | ~$0.01 |
-| Signal extraction | None (heuristic) | $0 |
-| Context assembly | None (local) | $0 |
+| Quick reflection | Haiku | Negligible (~200 tokens) |
+| Deep reflection | Sonnet | Light (~800 tokens) |
+| Meta reflection | Sonnet | Light (~800 tokens) |
+| Signal extraction | None (heuristic) | Zero (local) |
+| Context assembly | None (local) | Zero (local) |
 
-At typical usage (5-10 sessions/day), expect ~$0.05-0.10/day in reflection costs. The system self-regulates: if signals aren't accumulating, reflections don't fire.
+At typical usage (5-10 sessions/day), reflections add ~20 short CLI calls per week. The system self-regulates: if signals aren't accumulating, reflections don't fire.
