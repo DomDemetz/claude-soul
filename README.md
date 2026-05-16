@@ -19,11 +19,23 @@ Memory plugins store what happened. Claude Soul develops *how to think*.
 ## Quick start
 
 ```bash
-# Register the MCP server with Claude Code
-claude mcp add claude-soul -- node /path/to/claude-soul/packages/server/dist/index.js
+# Clone and build
+git clone https://github.com/DomDemetz/claude-soul.git
+cd claude-soul && npm install && npm run build
 
-# Add to your CLAUDE.md
-echo 'Call soul_context() at the start of every conversation.' >> CLAUDE.md
+# Run the setup wizard
+node packages/cli/dist/index.js init
+
+# Or register manually:
+claude mcp add --scope user claude-soul -- node $(pwd)/packages/server/dist/index.js
+```
+
+The init wizard creates `~/.soul/`, writes your identity files, registers the MCP server, and installs hooks. Then add this to your CLAUDE.md:
+
+```markdown
+## Soul System
+Call `soul_context()` at the start of every conversation.
+Use `soul_reflect` when you have idle time.
 ```
 
 Then use Claude Code normally. The system works in the background:
