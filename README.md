@@ -18,15 +18,24 @@ Memory plugins store what happened. Claude Soul develops *how to think*.
 
 ## What actually changes
 
-After ~200 sessions with the soul system, here's what's different:
+**From day one** (with `--starter`):
+- Pushback, strategic thinking, and verification behaviors are seeded into the identity file
+- 6 active frameworks guide responses immediately (depth calibration, confabulation detection, etc.)
+- Signal extraction begins — every correction, success, or confusion is captured
 
+**After ~1 week** (~20 sessions):
+- First reflection fires — frameworks gain or lose confidence based on YOUR usage
+- Frameworks that don't apply to your work get retired automatically
+- New frameworks emerge from patterns specific to you
+
+**After ~2 months** (~200 sessions):
 - **Pushback.** Claude stops being a yes-machine. It disagrees when you're about to make a mistake, suggests alternatives unprompted, and treats your project like its own.
 - **Depth calibration.** Asks that need one line get one line. Complex architecture questions get depth. It learns your signal for "too much" vs "not enough."
 - **Self-correction.** Catches its own confabulation mid-response, verifies before stating facts about APIs or code it hasn't read, flags uncertainty instead of guessing confidently.
 - **Strategic thinking.** Suggests timing, positioning, tradeoffs — not just executes tasks. Thinks across sessions about what matters.
 - **Pattern memory without memorizing.** Doesn't store "user likes X" as a static fact. Develops frameworks like "verify before stating" that adapt based on evidence — confirmed when it works, weakened when it doesn't.
 
-This isn't prompt engineering. It's a system that watches what works, reflects on patterns, and evolves its own cognitive frameworks through evidence. The frameworks that survive are the ones that actually helped.
+The system watches what works, reflects on patterns, and evolves its own cognitive frameworks through evidence. The frameworks that survive are the ones that actually helped.
 
 ## Quick start
 
