@@ -1,8 +1,13 @@
 import fs from "node:fs/promises";
+import fsSync from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { execSync } from "node:child_process";
 import readline from "node:readline";
+import { fileURLToPath } from "node:url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const SOUL_DIR = path.join(os.homedir(), ".soul");
 const DATA_DIR = path.join(SOUL_DIR, "data");
@@ -24,20 +29,23 @@ function ask(question: string): Promise<string> {
 
 function findServerPath(): string {
   const candidates = [
-    path.join(__dirname, "../../server/dist/index.js"),
-    path.join(__dirname, "../../../packages/server/dist/index.js"),
-    path.resolve("packages/server/dist/index.js"),
+    // From dist/commands/ → packages/server/dist/index.js
+    path.resolve(__dirname, "../../../server/dist/index.js"),
+    // From repo root (if running from source)
+    path.resolve(__dirname, "../../../../packages/server/dist/index.js"),
+    // Global install fallback
+    path.resolve("node_modules/@claude-soul/server/dist/index.js"),
   ];
 
   for (const candidate of candidates) {
     try {
-      const resolved = path.resolve(candidate);
-      return resolved;
+      if (fsSync.statSync(candidate).isFile()) return candidate;
     } catch {
       continue;
     }
   }
 
+  // Final fallback: assume npm global/local resolution will find it
   return path.join(os.homedir(), ".soul", "server", "dist", "index.js");
 }
 
@@ -249,7 +257,8 @@ export async function initCommand(options: { starter?: boolean; skipIdentity?: b
   // Copy hooks
   console.log("");
   console.log("  Installing hooks...");
-  const hooksSource = path.join(__dirname, "../../hooks");
+  // Hooks live at repo root /hooks/ — from dist/commands/ that's 4 levels up
+  const hooksSource = path.join(__dirname, "../../../../hooks");
   const hookFiles = ["session-journal.sh", "session-scratchpad.sh", "check-follow-ups.sh", "write-guard.sh"];
   for (const hook of hookFiles) {
     try {
