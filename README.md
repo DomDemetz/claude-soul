@@ -9,10 +9,11 @@
 A self-improving learning engine that gives Claude Code persistent identity, cross-session memory, and evolving cognitive frameworks. Not a static prompt — a system that develops over time.
 
 ```bash
-npx claude-soul init --starter
+npx claude-soul init --starter    # start with pre-evolved frameworks (recommended)
+npx claude-soul init              # blank slate — discover your own from scratch
 ```
 
-That's it. One command. No API key, no cloud, everything local.
+One command. No API key, no cloud, everything local.
 
 **Prerequisites:** Node.js >= 18, Claude Code (Pro or Max plan).
 
