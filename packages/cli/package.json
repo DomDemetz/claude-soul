@@ -18,10 +18,18 @@
     "claude",
     "claude-code",
     "mcp",
+    "mcp-server",
     "learning",
     "persistence",
     "identity",
-    "ai"
+    "ai",
+    "memory",
+    "cross-session",
+    "cognitive-frameworks",
+    "self-improving",
+    "developer-tools",
+    "ai-agent",
+    "llm"
   ],
   "author": "DomDemetz",
   "repository": {
