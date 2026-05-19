@@ -1,6 +1,6 @@
 {
   "name": "claude-soul-server",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Self-improving learning engine for Claude Code — persistent identity, cross-session memory, and evolving cognitive frameworks",
   "type": "module",
   "main": "dist/index.js",
@@ -8,7 +8,8 @@
   "bin": {
     "claude-soul-server": "dist/index.js",
     "claude-soul-on-stop": "dist/hooks/on-stop.js",
-    "claude-soul-index-new": "dist/cli/index-new.js"
+    "claude-soul-index-new": "dist/cli/index-new.js",
+    "claude-soul-extract-corrections": "dist/hooks/correction-extractor.js"
   },
   "scripts": {
     "build": "tsc",

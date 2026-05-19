@@ -6,13 +6,14 @@ import { statusCommand } from "./commands/status.js";
 import { resetCommand } from "./commands/reset.js";
 import { shadowCommand } from "./commands/shadow.js";
 import { indexCommand } from "./commands/index-cmd.js";
+import { upgradeCommand } from "./commands/upgrade.js";
 
 const program = new Command();
 
 program
   .name("claude-soul")
   .description("Give Claude Code a soul — persistent identity, cross-session learning, and evolving cognitive frameworks")
-  .version("0.2.0");
+  .version("0.2.1");
 
 program
   .command("init")
@@ -36,6 +37,11 @@ program
   .command("index")
   .description("Index existing soul files, journals, lessons, and frameworks into the memory database")
   .action(indexCommand);
+
+program
+  .command("upgrade")
+  .description("Update hooks and MCP server without touching your soul files or data")
+  .action(upgradeCommand);
 
 program
   .command("shadow")

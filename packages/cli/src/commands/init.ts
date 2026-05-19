@@ -80,6 +80,10 @@ function findIndexNewCommand(): string {
   return resolveServerEntry("dist/cli/index-new.js", "npx claude-soul-index-new");
 }
 
+function findCorrectionExtractorCommand(): string {
+  return resolveServerEntry("dist/hooks/correction-extractor.js", "npx claude-soul-extract-corrections");
+}
+
 // Built lazily (not a module-level constant) so server-entry resolution runs
 // when `init` actually executes, not at import time -- keeping the filesystem
 // /resolution side effects scoped to the command.
@@ -93,6 +97,7 @@ function buildSoulHooksConfig() {
         { type: "command", command: `bash ${HOOKS_DIR}/session-journal.sh`, timeout: 3000 },
         { type: "command", command: `node ${HOOKS_DIR}/session-agency.js`, timeout: 10000 },
         { type: "command", command: findIndexNewCommand(), timeout: 10000 },
+        { type: "command", command: findCorrectionExtractorCommand(), timeout: 5000 },
       ],
     },
   ],

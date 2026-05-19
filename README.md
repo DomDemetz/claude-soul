@@ -280,6 +280,17 @@ ollama pull nomic-embed-text
 
 Memory is automatically indexed after each session via the stop hook. Use `claude-soul index` to do a full index of all existing sources.
 
+## Upgrading
+
+Already installed? Update without losing your data:
+
+```bash
+npm install -g claude-soul@latest
+claude-soul upgrade
+```
+
+`upgrade` re-registers hooks and the MCP server, adds new features (correction tracking, memory indexing), and leaves your soul files and accumulated data untouched.
+
 ## Philosophy
 
 1. **Evidence over assertion** — Frameworks earn their place through repeated confirmation. Hypotheses that aren't confirmed get retired.
