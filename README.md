@@ -43,14 +43,15 @@ Patterns move through lifecycle stages: **new → active → improving → inter
 
 The system extracts behavioral signals from every session and periodically reflects on them. Frameworks that keep working get promoted. Bad ones get retired. After a few weeks, you get a Claude that pushes back on bad ideas, catches its own confabulation, and develops techniques you never prompted.
 
-## New install
+## Install
+
+### Quick start (no extra dependencies)
 
 ```bash
-npx claude-soul init --starter    # recommended — starts with pre-evolved frameworks
-npx claude-soul init              # blank slate — discover your own
+npx claude-soul init --starter
 ```
 
-Then add this to your CLAUDE.md:
+Add this to your CLAUDE.md:
 
 ```markdown
 ## Soul System
@@ -58,14 +59,31 @@ Call `soul_context()` at the start of every conversation.
 Use `soul_reflect` when you have idle time.
 ```
 
-That's it. Use Claude Code normally. Everything runs in the background.
+Done. Memory works with keyword search, everything else runs automatically.
 
-**Optional — enables semantic search instead of keyword search:**
+### With semantic memory
+
+Semantic search finds memories by meaning — "auth decision" finds a memory stored as "chose JWT tokens for login." Without it, search is keyword-based (still works, just less flexible).
+
 ```bash
+# 1. Install Ollama (https://ollama.com)
+# 2. Pull the embedding model
 ollama pull nomic-embed-text
+# 3. Then install as usual
+npx claude-soul init --starter
 ```
 
-## Already installed? Upgrade
+The system auto-detects Ollama. No configuration needed.
+
+### For agents (non-interactive)
+
+```bash
+npx claude-soul init --starter --skip-identity
+```
+
+Skips the name/context questions. Add the CLAUDE.md snippet to your agent's working directory and it works the same way — memory, correction tracking, and framework evolution all run through Claude Code's hooks and MCP server regardless of whether a human is typing or an agent is running.
+
+### Already installed? Upgrade
 
 ```bash
 npm install -g claude-soul@latest
@@ -74,15 +92,22 @@ claude-soul upgrade
 
 Your soul files, frameworks, and data stay untouched. The upgrade re-registers hooks and MCP server with the latest version and adds any new features.
 
-**New in v0.2:**
+After upgrading, run `claude-soul index` once to backfill existing data into the memory system.
+
+<details>
+<summary><b>What's new in v0.2</b></summary>
+
 - **Memory system** — 6 new MCP tools (`memory_save`, `memory_search`, `recall`, etc.) for cross-session fact storage with semantic search
 - **Correction tracking** — auto-detects when you correct your Claude and classifies the pattern
 - **Shadow analysis** — `claude-soul shadow` shows behavioral patterns with trend arrows and lifecycle stages
 - **Indexing** — `claude-soul index` loads your existing journals and soul files into the memory database
 
-After upgrading, run `claude-soul index` once to backfill your existing data into the memory system.
+</details>
 
-## CLI commands
+<details>
+<summary><b>CLI commands</b></summary>
+
+These are optional — the system runs automatically. The CLI is for inspecting collected data from your terminal.
 
 | Command | What it does |
 |---------|-------------|
@@ -91,6 +116,8 @@ After upgrading, run `claude-soul index` once to backfill your existing data int
 | `claude-soul shadow --generate` | Auto-generate a SHADOW.md from your data |
 | `claude-soul index` | Index existing files into memory database |
 | `claude-soul upgrade` | Update hooks without touching your data |
+
+</details>
 
 ## How it works
 
