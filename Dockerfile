@@ -3,7 +3,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY packages/server/package.json packages/server/
 COPY packages/cli/package.json packages/cli/
-RUN npm ci --workspace=packages/server
+RUN npm ci
 COPY packages/server packages/server
 RUN npm run build --workspace=packages/server
 ENTRYPOINT ["node", "packages/server/dist/index.js"]

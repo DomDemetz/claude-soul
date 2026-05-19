@@ -15,7 +15,7 @@ import { handleSoulFramework } from "./tools/soul-framework.js";
 
 const server = new McpServer({
   name: "claude-soul",
-  version: "0.1.0",
+  version: "0.1.1",
 });
 
 server.tool(
