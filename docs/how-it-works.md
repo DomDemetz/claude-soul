@@ -115,6 +115,7 @@ This state is written to `STATE.md` and used by the context assembler to adjust 
 │   ├── meta.json        # System metadata (phase, survival rate, etc.)
 │   ├── follow-ups.json  # Agency system: unresolved threads
 │   ├── agency-log.json  # What the agency evaluator found
+│   ├── memory.db        # SQLite: semantic memory with embeddings
 │   └── snapshots/       # Periodic framework snapshots (rollback safety)
 ├── files/
 │   ├── SOUL.md          # Identity document (you write this)
@@ -140,6 +141,7 @@ Claude Soul uses Claude Code's hook system to run automatically:
 | `check-follow-ups.sh` | SessionStart | Surface unresolved follow-ups |
 | `write-guard.sh` | PreToolUse | Protect soul files from accidental overwrites |
 | `session-scratchpad.sh` | PostToolUse | Log tool calls for within-session recall |
+| `index-new.js` | Stop | Index new journals and lessons into memory.db |
 
 ## Learning Phases
 
@@ -158,6 +160,35 @@ When two active frameworks give conflicting advice, the tension detector flags i
 Example tension: "Minimal Viable Change" vs "Fail Fast, Fail Loud" — sometimes the smallest change hides a failure, and sometimes failing loudly means over-engineering the error handling.
 
 Tensions are surfaced in context when relevant and tracked over time. Some resolve (one framework gets retired), some persist (both remain valid in different contexts).
+
+## Semantic Memory
+
+The learning engine tracks *how* to behave. Semantic memory stores *what* happened — facts, decisions, lessons, past conversations — and makes them searchable by meaning.
+
+### Storage
+
+Memory uses SQLite (`~/.soul/data/memory.db`) with WAL mode for concurrent access. Two tables:
+
+- **memories** — facts, decisions, preferences, lessons, architecture notes. Each has content, category, optional project tag, timestamps, access count, and an embedding vector.
+- **journal_entries** — session summaries from the conversation journal. Searchable alongside memories.
+
+### Embeddings
+
+When [Ollama](https://ollama.com) is running with `nomic-embed-text`, every saved memory gets a 768-dimensional embedding vector stored as a BLOB. Search computes cosine similarity between query and stored embeddings — brute-force, fast enough for <10K entries.
+
+**Without Ollama**, the system falls back to keyword search: tokenize the query, match against content with word overlap scoring. Functional but less precise. Memories saved without Ollama store `NULL` embeddings — they'll be upgraded when you install Ollama and run `claude-soul index`.
+
+### Search
+
+`memory_search` returns top-K results by similarity score. `recall` is the unified search — it searches everything and groups results into Facts & Decisions, Frameworks, Lessons, and Past Conversations.
+
+### Auto-Indexing
+
+A stop hook runs after each session and indexes new journal entries and lessons into the database. For a full index of all existing sources (soul files, native Claude Code memories, journals, lessons, frameworks), run:
+
+```bash
+claude-soul index
+```
 
 ## Cost
 

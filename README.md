@@ -119,10 +119,10 @@ Then use Claude Code normally. The system works in the background.
 
 Built entirely on Claude Code's official extension points:
 
-- **MCP Server** — 9 tools for identity, learning, and reflection
-- **Hooks** — automatic signal extraction, journaling, follow-up tracking
+- **MCP Server** — 15 tools for identity, learning, reflection, and memory
+- **Hooks** — automatic signal extraction, journaling, memory indexing, follow-up tracking
 - **Local-only** — everything on your machine, no cloud, no telemetry
-- **Single dependency** — `@modelcontextprotocol/sdk`
+- **Semantic memory** — SQLite + Ollama embeddings for meaning-based search (falls back to keyword search without Ollama)
 - **Uses your existing subscription** — no separate API key needed
 
 ### Three reflection tiers
@@ -141,7 +141,9 @@ The system adjusts based on maturity:
 - **Mastery** — Deliberate reflection. Fewer, more powerful frameworks.
 
 <details>
-<summary><b>MCP Tools (9 total)</b></summary>
+<summary><b>MCP Tools (15 total)</b></summary>
+
+**Learning & Identity (9 tools)**
 
 | Tool | Purpose |
 |------|---------|
@@ -154,6 +156,17 @@ The system adjusts based on maturity:
 | `soul_read` | Read soul files (SOUL.md, SHADOW.md, etc.) |
 | `soul_write` | Write to user-editable soul files |
 | `soul_status` | Get current system status |
+
+**Memory (6 tools)**
+
+| Tool | Purpose |
+|------|---------|
+| `memory_save` | Save facts, decisions, or lessons to long-term memory |
+| `memory_search` | Semantic search across all memories and journals |
+| `memory_journal` | Search or browse conversation journal entries |
+| `memory_recent` | List recently saved memories |
+| `memory_stats` | Memory system statistics and health |
+| `recall` | Unified search across everything — the "ask anything" tool |
 
 </details>
 
@@ -182,6 +195,7 @@ The system adjusts based on maturity:
 | `exemplars.json` | Best-practice response examples |
 | `tensions.json` | Detected contradictions between frameworks |
 | `meta.json` | Phase state, reflection count, survival rate |
+| `memory.db` | SQLite database for semantic memory (embeddings + content) |
 
 </details>
 
@@ -190,6 +204,7 @@ The system adjusts based on maturity:
 
 - **Stop hook** — Extracts signals from conversation transcript at session end. Triggers reflection if threshold reached.
 - **Session journal** — Appends session summary to `~/.soul/journals/YYYY-MM-DD.md`.
+- **Memory indexer** — Indexes new journal entries and lessons into the memory database after each session.
 - **Follow-up tracking** — Detects deferred threads, surfaces them next session.
 - **Write guard** — Prevents accidental edits to auto-managed files.
 
@@ -218,6 +233,31 @@ All settings in `~/.soul/config.json`:
 ```
 
 </details>
+
+## Memory
+
+The soul system learns *how* to behave. Memory remembers *what* happened. Together they answer *why* decisions were made.
+
+Memory uses SQLite for storage and [Ollama](https://ollama.com) with `nomic-embed-text` for local semantic embeddings. Everything stays on your machine.
+
+```bash
+# Index existing soul files, journals, and lessons into the memory database
+claude-soul index
+
+# Use naturally in conversation
+"save this decision to memory"
+"what did we decide about the auth flow?"
+"recall everything about the deployment last week"
+```
+
+**Ollama is optional.** Without it, memory falls back to keyword search — still functional, just less precise. Install Ollama and pull the model for semantic search:
+
+```bash
+# Optional — enables semantic search
+ollama pull nomic-embed-text
+```
+
+Memory is automatically indexed after each session via the stop hook. Use `claude-soul index` to do a full index of all existing sources.
 
 ## Philosophy
 

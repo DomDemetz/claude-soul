@@ -12,6 +12,13 @@ import { handleSoulReflect } from "./tools/soul-reflect.js";
 import { handleSoulEvaluate } from "./tools/soul-evaluate.js";
 import { handleSoulActivate } from "./tools/soul-activate.js";
 import { handleSoulFramework } from "./tools/soul-framework.js";
+import { handleMemorySearch } from "./tools/memory-search.js";
+import { handleMemorySave } from "./tools/memory-save.js";
+import { handleMemoryJournal } from "./tools/memory-journal.js";
+import { handleMemoryRecent } from "./tools/memory-recent.js";
+import { handleMemoryStats } from "./tools/memory-stats.js";
+import { handleRecall } from "./tools/recall.js";
+import { closeDb } from "./memory/db.js";
 
 const server = new McpServer({
   name: "claude-soul",
@@ -209,6 +216,143 @@ server.tool(
     }
   },
 );
+
+// --- Memory tools ---
+
+server.tool(
+  "memory_search",
+  "Semantic search across all memories and journal entries. Returns results ranked by meaning-similarity. Falls back to keyword search if Ollama is not available.",
+  {
+    query: z.string().describe("What to search for (natural language)"),
+    category: z
+      .enum(["decision", "preference", "fact", "episode", "lesson", "architecture", "framework", "general"])
+      .optional()
+      .describe("Filter by category"),
+    project: z.string().optional().describe("Filter by project name"),
+    topK: z.number().optional().describe("Number of results (default: 5)"),
+  },
+  async ({ query, category, project, topK }) => {
+    try {
+      const result = await handleMemorySearch(query, { category, project, topK });
+      return { content: [{ type: "text", text: result }] };
+    } catch (err) {
+      return {
+        content: [{ type: "text", text: `Error searching memories: ${err}` }],
+        isError: true,
+      };
+    }
+  },
+);
+
+server.tool(
+  "memory_save",
+  "Save a fact, decision, preference, or lesson to long-term memory. Automatically generates an embedding for future semantic search.",
+  {
+    content: z.string().describe("The memory content — be specific and self-contained"),
+    category: z
+      .enum(["decision", "preference", "fact", "episode", "lesson", "architecture", "framework", "general"])
+      .optional()
+      .describe("Memory category (default: general)"),
+    project: z.string().optional().describe("Associated project name"),
+  },
+  async ({ content, category, project }) => {
+    try {
+      const result = await handleMemorySave(content, category, project);
+      return { content: [{ type: "text", text: result }] };
+    } catch (err) {
+      return {
+        content: [{ type: "text", text: `Error saving memory: ${err}` }],
+        isError: true,
+      };
+    }
+  },
+);
+
+server.tool(
+  "memory_journal",
+  "Search or browse the conversation journal. Use to answer 'what did I work on?' or find past conversations by topic.",
+  {
+    query: z.string().optional().describe("Search query (semantic). Omit to list recent entries."),
+    days: z.number().optional().describe("How many days back to look (default: 7)"),
+  },
+  async ({ query, days }) => {
+    try {
+      const result = await handleMemoryJournal(query, days);
+      return { content: [{ type: "text", text: result }] };
+    } catch (err) {
+      return {
+        content: [{ type: "text", text: `Error reading journal: ${err}` }],
+        isError: true,
+      };
+    }
+  },
+);
+
+server.tool(
+  "memory_recent",
+  "List recently saved memories. Use for a quick overview of what's been recorded.",
+  {
+    days: z.number().optional().describe("How many days back (default: 7)"),
+    project: z.string().optional().describe("Filter by project name"),
+  },
+  async ({ days, project }) => {
+    try {
+      const result = await handleMemoryRecent(days, project);
+      return { content: [{ type: "text", text: result }] };
+    } catch (err) {
+      return {
+        content: [{ type: "text", text: `Error listing memories: ${err}` }],
+        isError: true,
+      };
+    }
+  },
+);
+
+server.tool(
+  "memory_stats",
+  "Show memory system statistics — counts by category, project, most accessed, and recent searches.",
+  {},
+  async () => {
+    try {
+      const result = await handleMemoryStats();
+      return { content: [{ type: "text", text: result }] };
+    } catch (err) {
+      return {
+        content: [{ type: "text", text: `Error getting stats: ${err}` }],
+        isError: true,
+      };
+    }
+  },
+);
+
+server.tool(
+  "recall",
+  "Unified search across ALL memory — facts, decisions, frameworks, lessons, and past conversations. Returns categorized results. Use this as the default 'ask anything about the past' tool.",
+  {
+    query: z.string().describe("What to recall (natural language)"),
+  },
+  async ({ query }) => {
+    try {
+      const result = await handleRecall(query);
+      return { content: [{ type: "text", text: result }] };
+    } catch (err) {
+      return {
+        content: [{ type: "text", text: `Error recalling: ${err}` }],
+        isError: true,
+      };
+    }
+  },
+);
+
+// Cleanup on exit
+process.on("SIGINT", () => {
+  closeDb();
+  process.exit(0);
+});
+process.on("SIGTERM", () => {
+  closeDb();
+  process.exit(0);
+});
 
 async function main() {
   const transport = new StdioServerTransport();

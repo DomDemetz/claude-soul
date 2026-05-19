@@ -4,6 +4,8 @@ import { Command } from "commander";
 import { initCommand } from "./commands/init.js";
 import { statusCommand } from "./commands/status.js";
 import { resetCommand } from "./commands/reset.js";
+import { shadowCommand } from "./commands/shadow.js";
+import { indexCommand } from "./commands/index-cmd.js";
 
 const program = new Command();
 
@@ -29,5 +31,17 @@ program
   .description("Reset learning data (keeps SOUL.md identity)")
   .option("--hard", "Also reset SOUL.md and all soul files")
   .action(resetCommand);
+
+program
+  .command("index")
+  .description("Index existing soul files, journals, lessons, and frameworks into the memory database")
+  .action(indexCommand);
+
+program
+  .command("shadow")
+  .description("Analyze behavioral correction patterns and track growth")
+  .option("--brief", "Show one-line summary per pattern")
+  .option("--generate", "Generate a SHADOW.md from your correction data")
+  .action(shadowCommand);
 
 program.parse();

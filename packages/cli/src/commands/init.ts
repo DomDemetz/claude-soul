@@ -76,6 +76,10 @@ function findOnStopCommand(): string {
   return resolveServerEntry("dist/hooks/on-stop.js", "npx claude-soul-on-stop");
 }
 
+function findIndexNewCommand(): string {
+  return resolveServerEntry("dist/cli/index-new.js", "npx claude-soul-index-new");
+}
+
 // Built lazily (not a module-level constant) so server-entry resolution runs
 // when `init` actually executes, not at import time -- keeping the filesystem
 // /resolution side effects scoped to the command.
@@ -88,6 +92,7 @@ function buildSoulHooksConfig() {
         { type: "command", command: findOnStopCommand(), timeout: 15000 },
         { type: "command", command: `bash ${HOOKS_DIR}/session-journal.sh`, timeout: 3000 },
         { type: "command", command: `node ${HOOKS_DIR}/session-agency.js`, timeout: 10000 },
+        { type: "command", command: findIndexNewCommand(), timeout: 10000 },
       ],
     },
   ],
@@ -403,6 +408,27 @@ export async function initCommand(options: { starter?: boolean; skipIdentity?: b
     console.log("      You can add them manually — see docs/configuration.md");
   }
 
+  // Check Ollama for memory system
+  console.log("");
+  console.log("  Checking memory system...");
+  let ollamaAvailable = false;
+  try {
+    execSync("ollama list", { stdio: "pipe" });
+    const output = execSync("ollama list", { encoding: "utf-8" });
+    if (output.includes("nomic-embed-text")) {
+      ollamaAvailable = true;
+      console.log("  [ok] Ollama + nomic-embed-text found — semantic memory enabled");
+    } else {
+      console.log("  [!] Ollama found but nomic-embed-text model not installed");
+      console.log("      Run: ollama pull nomic-embed-text");
+      console.log("      Memory will use keyword search until then.");
+    }
+  } catch {
+    console.log("  [!] Ollama not found — memory will use keyword search");
+    console.log("      For semantic search: https://ollama.com then 'ollama pull nomic-embed-text'");
+    console.log("      Everything else works without it.");
+  }
+
   // Print CLAUDE.md snippet
   console.log("");
   console.log("  ─────────────────────────────────────────────────────────────");
@@ -419,6 +445,9 @@ export async function initCommand(options: { starter?: boolean; skipIdentity?: b
   console.log("    3. After ~20 interactions, the first reflection fires");
   console.log("    4. Frameworks evolve. Your Claude gets smarter over time.");
   console.log("");
+  if (ollamaAvailable) {
+    console.log("  Memory: Run 'claude-soul index' to index existing files for search.");
+  }
   console.log("  Run 'claude-soul status' anytime to check system health.");
   console.log("");
 }
