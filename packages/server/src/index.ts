@@ -22,7 +22,7 @@ import { closeDb } from "./memory/db.js";
 
 const server = new McpServer({
   name: "claude-soul",
-  version: "0.2.1",
+  version: "0.2.2",
 });
 
 server.tool(
