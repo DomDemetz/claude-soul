@@ -6,7 +6,7 @@
 
 > Claude Code forgets everything between sessions. Claude Soul doesn't.
 
-A self-improving learning engine that gives Claude Code persistent identity, cross-session memory, and evolving cognitive frameworks. Not a static prompt — a system that develops over time.
+A self-correcting learning engine that gives Claude Code persistent identity, cross-session memory, and behavioral pattern tracking. It watches what you correct, tracks whether patterns improve or repeat, and develops judgment over time.
 
 ```bash
 npx claude-soul init --starter    # start with pre-evolved frameworks (recommended)
@@ -233,6 +233,27 @@ All settings in `~/.soul/config.json`:
 ```
 
 </details>
+
+## Shadow Analysis
+
+Your Claude makes the same mistakes repeatedly. The shadow system tracks them.
+
+```bash
+claude-soul shadow --brief
+```
+
+```
+  Shadow patterns:
+    premature_done: 26 corrections across 10 sessions ↑ [active]
+    robot_mode: 7 corrections across 6 sessions ↓↓ [internalized]
+    authenticity: 5 corrections across 5 sessions ↓↓ [internalized]
+```
+
+Every time you correct your Claude — "that's wrong", "you missed this", "stop doing that" — the system detects the pattern, classifies it, and tracks whether it's getting better or worse. Patterns move through lifecycle stages: **new → active → improving → internalized**.
+
+`claude-soul shadow --generate` creates a SHADOW.md from your data — narrative entries that describe the exact moment each failure pattern fires, written to catch it before it happens.
+
+This is the part that actually works. After 200 sessions of data: robot_mode went from 0.8/session to zero. Measurable behavioral change from context alone.
 
 ## Memory
 
