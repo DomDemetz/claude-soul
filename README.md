@@ -6,94 +6,51 @@
 
 > Claude Code forgets everything between sessions. Claude Soul doesn't.
 
-A self-correcting learning engine that gives Claude Code persistent identity, cross-session memory, and behavioral pattern tracking. It watches what you correct, tracks whether patterns improve or repeat, and develops judgment over time.
-
 ```bash
-npx claude-soul init --starter    # start with pre-evolved frameworks (recommended)
-npx claude-soul init              # blank slate — discover your own from scratch
+npx claude-soul init --starter
 ```
 
 One command. No API key, no cloud, everything local.
 
 **Prerequisites:** Node.js >= 18, Claude Code (Pro or Max plan).
 
-<!-- TODO: add demo.gif here -->
+## Three things it does
 
-## What happens
+### 1. Remembers across sessions
 
-Every session, the system silently extracts signals — corrections you make, things that work, confusion patterns. After ~20 sessions, it reflects on those signals and builds behavioral frameworks. Frameworks that keep working get promoted. Bad ones get retired.
-
-After ~200 sessions, you get a Claude that pushes back on bad ideas, calibrates response depth to what you actually need, catches its own confabulation, and develops techniques you never prompted.
-
-The difference from memory plugins: this doesn't store "user likes X." It develops judgment.
-
-## Quick example
+Cross-session memory with semantic search. Facts, decisions, lessons — all searchable by meaning, not just keywords. Uses local SQLite + optional [Ollama](https://ollama.com) embeddings.
 
 ```
-You: "load soul context"
-Claude: [loads identity + 6 active frameworks + state from previous sessions]
-
-You: "run a quick reflection"  
-Claude: [analyzes 23 signals → promotes 2 frameworks, retires 1, discovers new pattern]
-
-You: "what frameworks are active?"
-Claude: [shows evolved frameworks with confidence scores and evidence tiers]
+You: "what did we decide about the auth flow last week?"
+Claude: [searches memory → finds the decision, context, and reasoning]
 ```
 
-## How it works
+### 2. Tracks your corrections
 
-```
-Session N
-  │
-  ├─ soul_context() → load identity + frameworks + state
-  │
-  ├─ Normal Claude Code usage
-  │
-  ├─ Stop hook → extract signals (corrections, success, confusion)
-  │
-  ├─ Signal threshold reached?
-  │     └─ Yes → Reflection → test/discover/retire frameworks
-  │
-  └─ Updated frameworks available for Session N+1
-```
+Every time you correct your Claude — "that's wrong", "you missed this", "stop doing that" — the system detects the pattern, classifies it, and tracks whether it's getting better or worse.
 
-Frameworks evolve through evidence tiers:
-
-```
-hypothesis → observed → validated
-(untested)   (1+ confirmation)   (3+ confirmations)
-```
-
-## What actually changes over time
-
-**Day one** (with `--starter`): 6 active frameworks, signal extraction begins, pushback and verification behaviors seeded.
-
-**~1 week** (~20 sessions): First reflection fires. Frameworks gain or lose confidence based on YOUR usage. New ones emerge from your patterns.
-
-**~2 months** (~200 sessions): Pushback on bad ideas. Depth calibration. Self-correction. Strategic thinking. Pattern memory that adapts based on evidence, not static preferences.
-
-## Install options
-
-With starter frameworks (recommended):
 ```bash
-npx claude-soul init --starter
+$ claude-soul shadow --brief
+
+  premature_done: 26 corrections across 10 sessions ↑ [active]
+  robot_mode: 7 corrections across 6 sessions ↓↓ [internalized]
+  authenticity: 5 corrections across 5 sessions ↓↓ [internalized]
 ```
 
-Blank slate (discover your own from scratch):
+Patterns move through lifecycle stages: **new → active → improving → internalized**. After 200 sessions of real data: `robot_mode` went from 0.8 corrections/session to zero.
+
+### 3. Develops judgment over time
+
+The system extracts behavioral signals from every session and periodically reflects on them. Frameworks that keep working get promoted. Bad ones get retired. After a few weeks, you get a Claude that pushes back on bad ideas, catches its own confabulation, and develops techniques you never prompted.
+
+## Install
+
 ```bash
-npx claude-soul init
+npx claude-soul init --starter    # recommended — starts with pre-evolved frameworks
+npx claude-soul init              # blank slate — discover your own
 ```
 
-From source:
-```bash
-git clone https://github.com/DomDemetz/claude-soul.git
-cd claude-soul && npm install && npm run build
-node packages/cli/dist/index.js init --starter
-```
-
-### After install
-
-Add this to your CLAUDE.md (global or project-level):
+Then add this to your CLAUDE.md:
 
 ```markdown
 ## Soul System
@@ -101,77 +58,71 @@ Call `soul_context()` at the start of every conversation.
 Use `soul_reflect` when you have idle time.
 ```
 
-Then use Claude Code normally. The system works in the background.
+That's it. Use Claude Code normally. Everything runs in the background.
 
-## Things you can say
+**Optional — enables semantic search instead of keyword search:**
+```bash
+ollama pull nomic-embed-text
+```
 
-| What you want | What to say |
-|---|---|
-| Load context | "load soul context" |
-| Quick reflection | "reflect on recent sessions" |
-| Deep reflection | "do a deep reflection" |
-| Meta audit | "run a meta reflection" |
-| System health | "what's your soul status?" |
-| Record a signal | "signal: that approach worked well because..." |
-| See frameworks | "what frameworks are active?" |
+## CLI commands
 
-## Architecture
+| Command | What it does |
+|---------|-------------|
+| `claude-soul status` | System health — frameworks, signals, phase |
+| `claude-soul shadow` | Your correction patterns with trends |
+| `claude-soul shadow --generate` | Auto-generate a SHADOW.md from your data |
+| `claude-soul index` | Index existing files into memory database |
+| `claude-soul upgrade` | Update hooks without touching your data |
 
-Built entirely on Claude Code's official extension points:
+## How it works
 
-- **MCP Server** — 15 tools for identity, learning, reflection, and memory
-- **Hooks** — automatic signal extraction, journaling, memory indexing, follow-up tracking
-- **Local-only** — everything on your machine, no cloud, no telemetry
-- **Semantic memory** — SQLite + Ollama embeddings for meaning-based search (falls back to keyword search without Ollama)
-- **Uses your existing subscription** — no separate API key needed
+```
+Session N
+  │
+  ├─ Load identity + frameworks + memory
+  │
+  ├─ Normal Claude Code usage
+  │
+  ├─ Session ends → extract signals + corrections + index to memory
+  │
+  └─ Reflection threshold? → evolve frameworks → Session N+1
+```
 
-### Three reflection tiers
-
-| Tier | Trigger | What it does |
-|------|---------|-------------|
-| Quick | ~20 signals | Tests existing frameworks against recent signals |
-| Deep | 25-100 signals | Full analysis, discovers new frameworks, generates lessons |
-| Meta | Manual or auto | Audits framework coherence, detects redundancy |
-
-### Phase-adaptive learning
-
-The system adjusts based on maturity:
-- **Apprentice** — Tight feedback loops. Quick reflections. Cast a wide net.
-- **Creative** — Moderate cadence. Refine and merge.
-- **Mastery** — Deliberate reflection. Fewer, more powerful frameworks.
+Everything runs through Claude Code's official extension points: an MCP server (15 tools) and hooks (signal extraction, journaling, memory indexing, correction tracking).
 
 <details>
 <summary><b>MCP Tools (15 total)</b></summary>
 
-**Learning & Identity (9 tools)**
+**Identity & Learning**
 
 | Tool | Purpose |
 |------|---------|
 | `soul_context` | Load identity + frameworks + state at session start |
-| `soul_activate` | Select relevant frameworks for the current conversation |
+| `soul_activate` | Select relevant frameworks for current conversation |
 | `soul_framework` | Load a single framework with full evidence history |
-| `soul_signal` | Manually record observed interaction patterns |
+| `soul_signal` | Record observed interaction patterns |
 | `soul_reflect` | Trigger a reflection cycle (quick/deep/meta) |
 | `soul_self_evaluate` | Record a self-evaluation of a complex response |
 | `soul_read` | Read soul files (SOUL.md, SHADOW.md, etc.) |
 | `soul_write` | Write to user-editable soul files |
 | `soul_status` | Get current system status |
 
-**Memory (6 tools)**
+**Memory**
 
 | Tool | Purpose |
 |------|---------|
-| `memory_save` | Save facts, decisions, or lessons to long-term memory |
-| `memory_search` | Semantic search across all memories and journals |
-| `memory_journal` | Search or browse conversation journal entries |
+| `memory_save` | Save facts, decisions, or lessons |
+| `memory_search` | Semantic search across all memories |
+| `memory_journal` | Search or browse conversation journals |
 | `memory_recent` | List recently saved memories |
-| `memory_stats` | Memory system statistics and health |
-| `recall` | Unified search across everything — the "ask anything" tool |
+| `memory_stats` | Memory system statistics |
+| `recall` | Unified "ask anything about the past" search |
 
 </details>
 
 <details>
-<summary><b>Soul files</b></summary>
+<summary><b>Soul files (in ~/.soul/files/)</b></summary>
 
 | File | Purpose | Managed by |
 |------|---------|-----------|
@@ -181,32 +132,6 @@ The system adjusts based on maturity:
 | `CORRECTIONS.md` | Patterns to avoid, learned from mistakes | You + Claude |
 | `STATE.md` | System telemetry (confidence, phase, counts) | Auto |
 | `FRAMEWORKS.md` | Active framework index | Auto |
-
-</details>
-
-<details>
-<summary><b>Data files</b></summary>
-
-| File | Purpose |
-|------|---------|
-| `frameworks.json` | Full framework store with evidence, confidence, tiers |
-| `session-log.jsonl` | Append-only signal log (auto-truncates at 50KB) |
-| `lessons.json` | Extracted principles with confidence scores |
-| `exemplars.json` | Best-practice response examples |
-| `tensions.json` | Detected contradictions between frameworks |
-| `meta.json` | Phase state, reflection count, survival rate |
-| `memory.db` | SQLite database for semantic memory (embeddings + content) |
-
-</details>
-
-<details>
-<summary><b>Hooks</b></summary>
-
-- **Stop hook** — Extracts signals from conversation transcript at session end. Triggers reflection if threshold reached.
-- **Session journal** — Appends session summary to `~/.soul/journals/YYYY-MM-DD.md`.
-- **Memory indexer** — Indexes new journal entries and lessons into the memory database after each session.
-- **Follow-up tracking** — Detects deferred threads, surfaces them next session.
-- **Write guard** — Prevents accidental edits to auto-managed files.
 
 </details>
 
@@ -234,68 +159,20 @@ All settings in `~/.soul/config.json`:
 
 </details>
 
-## Shadow Analysis
-
-Your Claude makes the same mistakes repeatedly. The shadow system tracks them.
-
-```bash
-claude-soul shadow --brief
-```
-
-```
-  Shadow patterns:
-    premature_done: 26 corrections across 10 sessions ↑ [active]
-    robot_mode: 7 corrections across 6 sessions ↓↓ [internalized]
-    authenticity: 5 corrections across 5 sessions ↓↓ [internalized]
-```
-
-Every time you correct your Claude — "that's wrong", "you missed this", "stop doing that" — the system detects the pattern, classifies it, and tracks whether it's getting better or worse. Patterns move through lifecycle stages: **new → active → improving → internalized**.
-
-`claude-soul shadow --generate` creates a SHADOW.md from your data — narrative entries that describe the exact moment each failure pattern fires, written to catch it before it happens.
-
-This is the part that actually works. After 200 sessions of data: robot_mode went from 0.8/session to zero. Measurable behavioral change from context alone.
-
-## Memory
-
-The soul system learns *how* to behave. Memory remembers *what* happened. Together they answer *why* decisions were made.
-
-Memory uses SQLite for storage and [Ollama](https://ollama.com) with `nomic-embed-text` for local semantic embeddings. Everything stays on your machine.
-
-```bash
-# Index existing soul files, journals, and lessons into the memory database
-claude-soul index
-
-# Use naturally in conversation
-"save this decision to memory"
-"what did we decide about the auth flow?"
-"recall everything about the deployment last week"
-```
-
-**Ollama is optional.** Without it, memory falls back to keyword search — still functional, just less precise. Install Ollama and pull the model for semantic search:
-
-```bash
-# Optional — enables semantic search
-ollama pull nomic-embed-text
-```
-
-Memory is automatically indexed after each session via the stop hook. Use `claude-soul index` to do a full index of all existing sources.
-
 ## Upgrading
-
-Already installed? Update without losing your data:
 
 ```bash
 npm install -g claude-soul@latest
 claude-soul upgrade
 ```
 
-`upgrade` re-registers hooks and the MCP server, adds new features (correction tracking, memory indexing), and leaves your soul files and accumulated data untouched.
+Re-registers hooks and MCP server, adds new features, leaves your data untouched.
 
 ## Philosophy
 
-1. **Evidence over assertion** — Frameworks earn their place through repeated confirmation. Hypotheses that aren't confirmed get retired.
-2. **Local-first** — No cloud, no accounts, no telemetry. Your cognitive development stays on your machine.
-3. **Invisible when working** — Extracts signals automatically, reflects in the background, surfaces context without being asked.
+1. **Evidence over assertion** — Frameworks earn their place through repeated confirmation.
+2. **Local-first** — No cloud, no accounts, no telemetry.
+3. **Invisible when working** — Extracts signals automatically, reflects in the background.
 
 ## Contributing
 

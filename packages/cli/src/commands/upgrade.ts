@@ -18,6 +18,10 @@ function quotePath(p: string): string {
   return `"${p.replace(/(["$`])/g, "\\$1")}"`;
 }
 
+function isSoulHook(command: string): boolean {
+  return command.includes(".soul/") || command.includes("claude-soul");
+}
+
 function resolveServerEntry(relativeEntry: string, npxFallback: string): string {
   const monorepoPath = path.resolve(__dirname, "../../../server", relativeEntry);
   try {
@@ -130,19 +134,20 @@ export async function upgradeCommand(): Promise<void> {
     if (!settings.hooks[event]) {
       settings.hooks[event] = entries;
     } else {
+      for (const group of settings.hooks[event]) {
+        if (group.hooks) {
+          group.hooks = group.hooks.filter((h: any) => !isSoulHook(h.command));
+        }
+      }
+      settings.hooks[event] = settings.hooks[event].filter(
+        (g: any) => !g.hooks || g.hooks.length > 0,
+      );
       for (const entry of entries as any[]) {
-        for (const hook of entry.hooks) {
-          const alreadyExists = settings.hooks[event].some((existing: any) =>
-            existing.hooks?.some((h: any) => h.command === hook.command),
-          );
-          if (!alreadyExists) {
-            const matchingGroup = settings.hooks[event].find((e: any) => e.matcher === entry.matcher);
-            if (matchingGroup) {
-              matchingGroup.hooks.push(hook);
-            } else {
-              settings.hooks[event].push(entry);
-            }
-          }
+        const matchingGroup = settings.hooks[event].find((e: any) => e.matcher === entry.matcher);
+        if (matchingGroup) {
+          matchingGroup.hooks.push(...entry.hooks);
+        } else {
+          settings.hooks[event].push(entry);
         }
       }
     }
