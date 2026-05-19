@@ -25,7 +25,7 @@ export type Framework = {
   status: "active" | "questioning" | "retired" | "merged";
 };
 
-export type EvidenceContext = "external" | "self-referential" | "unknown";
+export type EvidenceContext = "external" | "self-referential" | "persistence" | "unknown";
 
 export type FrameworkEvidence = {
   timestamp: number;

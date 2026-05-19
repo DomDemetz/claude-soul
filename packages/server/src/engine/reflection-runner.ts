@@ -264,6 +264,7 @@ export async function runReflection(
     if (test.result === "confirmed" || test.result === "contradicted") {
       const contextType = test.contextType === "external" ? "external"
         : test.contextType === "self-referential" ? "self-referential"
+        : test.contextType === "persistence" ? "persistence"
         : "unknown" as const;
       await frameworkEngine.recordEvidence(test.frameworkId, {
         timestamp: Date.now(),

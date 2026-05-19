@@ -248,8 +248,11 @@ export class FrameworkEngine {
 
     for (const e of framework.evidence) {
       const recencyWeight = now - e.timestamp < sevenDays ? 2 : 1;
-      // Self-referential evidence counts at half weight
-      const contextWeight = e.contextType === "self-referential" ? 0.5 : 1.0;
+      // Persistence checks (framework is "still valid") get zero weight — they're not new evidence
+      // Self-referential evidence (about the soul system itself) counts at half weight
+      const contextWeight = e.contextType === "persistence" ? 0
+        : e.contextType === "self-referential" ? 0.5
+        : 1.0;
       const weight = recencyWeight * contextWeight;
       if (e.type === "confirmed") confirmed += weight;
       else if (e.type === "contradicted") contradicted += weight;

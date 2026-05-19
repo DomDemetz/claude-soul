@@ -104,8 +104,12 @@ export function buildQuickReflectionPrompt(params: {
     "",
     "For each active/questioning framework, assess: was it confirmed, contradicted, or irrelevant based on these signals?",
     "Cite specific signal evidence. For each test, also classify contextType:",
-    "  - 'external': framework was applied during a real task (coding, debugging, building, explaining code, etc.)",
+    "  - 'external': framework was ACTIVELY APPLIED during a real task and the signals show it made a difference",
     "  - 'self-referential': evidence comes from discussing the soul/framework system itself",
+    "  - 'persistence': framework is still theoretically valid but was NOT actively involved in any signal this session",
+    "CRITICAL: A framework being 'still true' is NOT a confirmation. Mark it 'irrelevant' or use contextType 'persistence'.",
+    "Confirmation means the framework was APPLIED to a specific situation and the signals show the outcome.",
+    "If you cannot point to a specific signal where the framework actively changed behavior, it is NOT confirmed.",
     "Only 'external' evidence advances a framework's tier. Be honest about this classification.",
     "",
     "For PROCESS frameworks (kind: process), also assess:",
@@ -124,7 +128,7 @@ export function buildQuickReflectionPrompt(params: {
     JSON.stringify(
       {
         frameworkTests: [
-          { frameworkId: "string", result: "confirmed|contradicted|irrelevant", evidence: "string", contextType: "external|self-referential" },
+          { frameworkId: "string", result: "confirmed|contradicted|irrelevant", evidence: "string", contextType: "external|self-referential|persistence" },
         ],
         newFrameworks: [
           { name: "string", description: "string", domain: "string", confidence: 0.3 },
@@ -345,7 +349,8 @@ export function buildDeepReflectionPrompt(params: {
     "",
     "2. FRAMEWORK TESTING",
     "   For each active framework: confirmed, contradicted, or irrelevant? Cite specific signal evidence.",
-    "   Classify contextType: 'external' (real task — coding, debugging, building) or 'self-referential' (discussing the soul/framework system).",
+    "   Classify contextType: 'external' (real task — coding, debugging, building), 'self-referential' (discussing the soul/framework system), or 'persistence' (framework is still valid but wasn't actively applied).",
+    "   CRITICAL: 'still theoretically correct' is NOT confirmation. Confirmation requires the framework being APPLIED to a specific signal and changing behavior. Use 'persistence' or mark 'irrelevant' for frameworks that are merely 'still true.'",
     "   Only external evidence advances a framework's tier. Be honest about this.",
     "   For PROCESS frameworks: Was a trigger condition met? Were steps followed? Did it improve the outcome?",
     "   A missed trigger that led to a correction is strong confirmation. A followed process with no improvement is contradiction.",
@@ -386,7 +391,7 @@ export function buildDeepReflectionPrompt(params: {
           { description: "string", evidence: "string", depth: "surface|structural|identity" },
         ],
         frameworkTests: [
-          { frameworkId: "string", result: "confirmed|contradicted|irrelevant", evidence: "string", contextType: "external|self-referential" },
+          { frameworkId: "string", result: "confirmed|contradicted|irrelevant", evidence: "string", contextType: "external|self-referential|persistence" },
         ],
         newFrameworks: [
           { name: "string", description: "string", domain: "string", confidence: 0.3 },
