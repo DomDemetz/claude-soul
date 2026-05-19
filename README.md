@@ -43,7 +43,7 @@ Patterns move through lifecycle stages: **new → active → improving → inter
 
 The system extracts behavioral signals from every session and periodically reflects on them. Frameworks that keep working get promoted. Bad ones get retired. After a few weeks, you get a Claude that pushes back on bad ideas, catches its own confabulation, and develops techniques you never prompted.
 
-## Install
+## New install
 
 ```bash
 npx claude-soul init --starter    # recommended — starts with pre-evolved frameworks
@@ -64,6 +64,23 @@ That's it. Use Claude Code normally. Everything runs in the background.
 ```bash
 ollama pull nomic-embed-text
 ```
+
+## Already installed? Upgrade
+
+```bash
+npm install -g claude-soul@latest
+claude-soul upgrade
+```
+
+Your soul files, frameworks, and data stay untouched. The upgrade re-registers hooks and MCP server with the latest version and adds any new features.
+
+**New in v0.2:**
+- **Memory system** — 6 new MCP tools (`memory_save`, `memory_search`, `recall`, etc.) for cross-session fact storage with semantic search
+- **Correction tracking** — auto-detects when you correct your Claude and classifies the pattern
+- **Shadow analysis** — `claude-soul shadow` shows behavioral patterns with trend arrows and lifecycle stages
+- **Indexing** — `claude-soul index` loads your existing journals and soul files into the memory database
+
+After upgrading, run `claude-soul index` once to backfill your existing data into the memory system.
 
 ## CLI commands
 
@@ -158,15 +175,6 @@ All settings in `~/.soul/config.json`:
 ```
 
 </details>
-
-## Upgrading
-
-```bash
-npm install -g claude-soul@latest
-claude-soul upgrade
-```
-
-Re-registers hooks and MCP server, adds new features, leaves your data untouched.
 
 ## Philosophy
 
