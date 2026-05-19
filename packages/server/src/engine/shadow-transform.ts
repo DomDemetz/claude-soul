@@ -47,7 +47,7 @@ export function transformShadowContent(raw: string): string {
   }
 
   if (pulls.length === 0) {
-    return "";
+    return raw;
   }
 
   const body = pulls.map((p) => `- ${p}`).join("\n");
