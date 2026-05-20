@@ -29,7 +29,12 @@ const DEFAULT_META: MetaState = {
 };
 
 export async function loadMeta(): Promise<MetaState> {
-  return readJsonSafe<MetaState>(META_PATH, { ...DEFAULT_META });
+  const loaded = await readJsonSafe<MetaState>(META_PATH, { ...DEFAULT_META });
+  // Merge defaults so a meta.json written by an older schema doesn't leave
+  // required fields undefined. getPhaseGuidance() and updateMetaAfterReflection()
+  // dereference oscillationFlags / phaseHistory as arrays and would otherwise
+  // throw "Cannot read properties of undefined (reading 'length')".
+  return { ...DEFAULT_META, ...loaded };
 }
 
 export async function saveMeta(meta: MetaState): Promise<void> {
