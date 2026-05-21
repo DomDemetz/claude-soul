@@ -1,7 +1,7 @@
 {
   "name": "claude-soul",
-  "version": "0.2.2",
-  "description": "Give Claude Code a soul — persistent identity, cross-session learning, and evolving cognitive frameworks",
+  "version": "0.2.3",
+  "description": "Give Claude Code a soul \u2014 persistent identity, cross-session learning, and evolving cognitive frameworks",
   "type": "module",
   "bin": {
     "claude-soul": "dist/index.js"
@@ -38,7 +38,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "claude-soul-server": "^0.2.0",
+    "claude-soul-server": "0.2.3",
     "commander": "^12.0.0"
   },
   "devDependencies": {
