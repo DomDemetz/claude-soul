@@ -5,6 +5,7 @@ import os from "node:os";
 import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
+import { writeFileAtomic } from "../util/atomic-write.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -156,7 +157,7 @@ export async function upgradeCommand(): Promise<void> {
     }
   }
 
-  await fs.writeFile(CLAUDE_SETTINGS_PATH, JSON.stringify(settings, null, 2));
+  await writeFileAtomic(CLAUDE_SETTINGS_PATH, JSON.stringify(settings, null, 2));
   console.log("  [ok] Hooks registered (new hooks added, existing kept)");
 
   // Re-register MCP server

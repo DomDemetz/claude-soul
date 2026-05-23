@@ -35,12 +35,22 @@ export async function readJsonSafe<T>(filePath: string, fallback: T): Promise<T>
   }
 }
 
-export async function writeJsonAtomic(filePath: string, data: unknown): Promise<void> {
+export async function writeFileAtomic(filePath: string, content: string): Promise<void> {
   const dir = path.dirname(filePath);
   await fs.mkdir(dir, { recursive: true });
   const tmpPath = `${filePath}.tmp.${process.pid}`;
-  await fs.writeFile(tmpPath, JSON.stringify(data, null, 2), "utf-8");
-  await fs.rename(tmpPath, filePath);
+  try {
+    await fs.writeFile(tmpPath, content, "utf-8");
+    await fs.rename(tmpPath, filePath);
+  } catch (err) {
+    // Clean up orphaned tmp file if write/rename failed mid-flight.
+    await fs.unlink(tmpPath).catch(() => {});
+    throw err;
+  }
+}
+
+export async function writeJsonAtomic(filePath: string, data: unknown): Promise<void> {
+  await writeFileAtomic(filePath, JSON.stringify(data, null, 2));
 }
 
 export async function readFileSafe(filePath: string): Promise<string> {

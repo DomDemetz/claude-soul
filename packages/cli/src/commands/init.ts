@@ -6,6 +6,7 @@ import { execSync } from "node:child_process";
 import readline from "node:readline";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
+import { writeFileAtomic } from "../util/atomic-write.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -163,7 +164,7 @@ async function registerHooks(): Promise<void> {
     }
   }
 
-  await fs.writeFile(CLAUDE_SETTINGS_PATH, JSON.stringify(settings, null, 2));
+  await writeFileAtomic(CLAUDE_SETTINGS_PATH, JSON.stringify(settings, null, 2));
 }
 
 async function checkPrerequisites(): Promise<boolean> {
