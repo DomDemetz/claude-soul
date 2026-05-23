@@ -14,6 +14,9 @@ const SOUL_DIR = path.join(os.homedir(), ".soul");
 const HOOKS_DIR = path.join(SOUL_DIR, "hooks");
 const CLAUDE_SETTINGS_PATH = path.join(os.homedir(), ".claude", "settings.json");
 
+// Forward-slash version of HOOKS_DIR for use in shell commands (bash requires / on Windows too)
+const HOOKS_DIR_FWD = HOOKS_DIR.replace(/\\/g, "/");
+
 function quotePath(p: string): string {
   return `"${p.replace(/(["$`])/g, "\\$1")}"`;
 }
@@ -60,8 +63,8 @@ function buildSoulHooksConfig() {
         matcher: "",
         hooks: [
           { type: "command", command: findOnStopCommand(), timeout: 15000 },
-          { type: "command", command: `bash ${HOOKS_DIR}/session-journal.sh`, timeout: 3000 },
-          { type: "command", command: `node ${HOOKS_DIR}/session-agency.js`, timeout: 10000 },
+          { type: "command", command: `bash ${HOOKS_DIR_FWD}/session-journal.sh`, timeout: 3000 },
+          { type: "command", command: `node ${HOOKS_DIR_FWD}/session-agency.js`, timeout: 10000 },
           { type: "command", command: findIndexNewCommand(), timeout: 10000 },
           { type: "command", command: findCorrectionExtractorCommand(), timeout: 5000 },
         ],
@@ -71,7 +74,7 @@ function buildSoulHooksConfig() {
       {
         matcher: "",
         hooks: [
-          { type: "command", command: `bash ${HOOKS_DIR}/session-scratchpad.sh`, timeout: 2000 },
+          { type: "command", command: `bash ${HOOKS_DIR_FWD}/session-scratchpad.sh`, timeout: 2000 },
         ],
       },
     ],
@@ -79,7 +82,7 @@ function buildSoulHooksConfig() {
       {
         matcher: "Write|Edit",
         hooks: [
-          { type: "command", command: `bash ${HOOKS_DIR}/write-guard.sh`, timeout: 2000 },
+          { type: "command", command: `bash ${HOOKS_DIR_FWD}/write-guard.sh`, timeout: 2000 },
         ],
       },
     ],
