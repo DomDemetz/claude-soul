@@ -131,7 +131,7 @@ export type LLMReflectionResult = {
   }>;
   frameworkEvolutions: Array<{
     frameworkId: string;
-    action: "refine" | "merge" | "retire" | "split";
+    action: "refine" | "retire";
     detail: string;
   }>;
   tensionUpdates: Array<{
