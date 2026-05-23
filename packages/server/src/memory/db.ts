@@ -1,5 +1,6 @@
 import path from "node:path";
 import fs from "node:fs";
+import os from "node:os";
 
 let Database: any;
 try {
@@ -8,7 +9,7 @@ try {
   Database = null;
 }
 
-const DB_DIR = path.join(process.env.HOME ?? "~", ".soul", "data");
+const DB_DIR = path.join(os.homedir(), ".soul", "data");
 const DB_PATH = path.join(DB_DIR, "memory.db");
 
 let _db: any = null;

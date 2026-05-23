@@ -5,10 +5,11 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import os from "node:os";
 import { getDb, generateId, closeDb } from "../memory/db.js";
 import { embed, embeddingToBuffer } from "../memory/embeddings.js";
 
-const HOME = process.env.HOME ?? "/tmp";
+const HOME = os.homedir();
 
 async function indexNewJournals(): Promise<number> {
   const dir = path.join(HOME, ".soul", "journals");
