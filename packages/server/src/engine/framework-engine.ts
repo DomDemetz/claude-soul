@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import fs from "node:fs/promises";
 import type {
   Framework,
   FrameworkStore,
@@ -29,21 +30,36 @@ export class FrameworkEngine {
   private store: FrameworkStore | null = null;
 
   async initialize(): Promise<FrameworkStore> {
+    let existing: FrameworkStore | null = null;
     try {
-      const existing = await readJsonSafe<FrameworkStore | null>(FRAMEWORKS_PATH, null);
-      if (existing && existing.frameworks && existing.frameworks.length > 0) {
-        let changed = this.migrateV2(existing);
-        changed = this.migrateV3(existing) || changed;
-        changed = this.migrateV4(existing) || changed;
-        changed = this.injectMissingSeeds(existing) || changed;
-        if (changed) {
-          await writeJsonAtomic(FRAMEWORKS_PATH, existing);
-        }
-        this.store = existing;
-        return existing;
+      const raw = await fs.readFile(FRAMEWORKS_PATH, "utf-8");
+      existing = JSON.parse(raw) as FrameworkStore;
+    } catch (err: any) {
+      if (err?.code === "ENOENT") {
+        // First run — silently fall through to seed.
+      } else {
+        // Corrupted JSON (or read failure that isn't a missing file): back up
+        // the existing file before re-seeding so the user's learned data isn't
+        // silently overwritten on the next save.
+        const bakPath = `${FRAMEWORKS_PATH}.corrupted.${Date.now()}.bak`;
+        await fs.copyFile(FRAMEWORKS_PATH, bakPath).catch(() => {});
+        console.error(
+          `[soul] frameworks.json failed to load (${err?.message ?? err}). ` +
+            `Backed up to ${bakPath}. Re-seeding from defaults.`,
+        );
       }
-    } catch {
-      // Fall through to create new store
+    }
+
+    if (existing && existing.frameworks && existing.frameworks.length > 0) {
+      let changed = this.migrateV2(existing);
+      changed = this.migrateV3(existing) || changed;
+      changed = this.migrateV4(existing) || changed;
+      changed = this.injectMissingSeeds(existing) || changed;
+      if (changed) {
+        await writeJsonAtomic(FRAMEWORKS_PATH, existing);
+      }
+      this.store = existing;
+      return existing;
     }
 
     const now = Date.now();
