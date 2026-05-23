@@ -16,6 +16,9 @@ const SOUL_DIR = path.join(os.homedir(), ".soul");
 const DATA_DIR = path.join(SOUL_DIR, "data");
 const FILES_DIR = path.join(SOUL_DIR, "files");
 const HOOKS_DIR = path.join(SOUL_DIR, "hooks");
+// Forward-slash version of HOOKS_DIR for shell commands — bash on Windows
+// (Git Bash, the one Claude Code invokes) cannot resolve backslash paths.
+const HOOKS_DIR_FWD = HOOKS_DIR.replace(/\\/g, "/");
 const JOURNALS_DIR = path.join(SOUL_DIR, "journals");
 const REFLECTIONS_DIR = path.join(SOUL_DIR, "reflections");
 const SNAPSHOTS_DIR = path.join(DATA_DIR, "snapshots");
@@ -99,8 +102,8 @@ function buildSoulHooksConfig() {
       matcher: "",
       hooks: [
         { type: "command", command: findOnStopCommand(), timeout: 15000 },
-        { type: "command", command: `bash ${HOOKS_DIR}/session-journal.sh`, timeout: 3000 },
-        { type: "command", command: `node ${HOOKS_DIR}/session-agency.js`, timeout: 10000 },
+        { type: "command", command: `bash ${quotePath(HOOKS_DIR_FWD + "/session-journal.sh")}`, timeout: 3000 },
+        { type: "command", command: `node ${quotePath(HOOKS_DIR_FWD + "/session-agency.js")}`, timeout: 10000 },
         { type: "command", command: findIndexNewCommand(), timeout: 10000 },
         { type: "command", command: findCorrectionExtractorCommand(), timeout: 5000 },
       ],
@@ -110,7 +113,7 @@ function buildSoulHooksConfig() {
     {
       matcher: "",
       hooks: [
-        { type: "command", command: `bash ${HOOKS_DIR}/session-scratchpad.sh`, timeout: 2000 },
+        { type: "command", command: `bash ${quotePath(HOOKS_DIR_FWD + "/session-scratchpad.sh")}`, timeout: 2000 },
       ],
     },
   ],
@@ -118,7 +121,7 @@ function buildSoulHooksConfig() {
     {
       matcher: "Write|Edit",
       hooks: [
-        { type: "command", command: `bash ${HOOKS_DIR}/write-guard.sh`, timeout: 2000 },
+        { type: "command", command: `bash ${quotePath(HOOKS_DIR_FWD + "/write-guard.sh")}`, timeout: 2000 },
       ],
     },
   ],
@@ -129,13 +132,26 @@ async function registerHooks(): Promise<void> {
   // Ensure ~/.claude/ exists
   await fs.mkdir(path.dirname(CLAUDE_SETTINGS_PATH), { recursive: true });
 
-  // Read existing settings or start fresh
+  // Read existing settings or start fresh. Distinguish "file missing" (ENOENT,
+  // safe to start fresh) from "file exists but is invalid JSON" — overwriting
+  // an unparseable settings.json would silently destroy every other tool's
+  // Claude Code configuration. Refuse to proceed in that case.
   let settings: Record<string, any> = {};
   try {
     const raw = await fs.readFile(CLAUDE_SETTINGS_PATH, "utf-8");
     settings = JSON.parse(raw);
-  } catch {
-    // No existing settings file
+  } catch (err: unknown) {
+    const code = (err as NodeJS.ErrnoException)?.code;
+    if (code === "ENOENT") {
+      // First run — start fresh.
+    } else if (err instanceof SyntaxError) {
+      throw new Error(
+        `[soul] ${CLAUDE_SETTINGS_PATH} exists but is not valid JSON (${err.message}). ` +
+          `Refusing to overwrite — fix or remove the file and re-run claude-soul init.`,
+      );
+    } else {
+      throw err;
+    }
   }
 
   if (!settings.hooks) settings.hooks = {};

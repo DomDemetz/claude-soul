@@ -64,8 +64,8 @@ function buildSoulHooksConfig() {
         matcher: "",
         hooks: [
           { type: "command", command: findOnStopCommand(), timeout: 15000 },
-          { type: "command", command: `bash ${HOOKS_DIR_FWD}/session-journal.sh`, timeout: 3000 },
-          { type: "command", command: `node ${HOOKS_DIR_FWD}/session-agency.js`, timeout: 10000 },
+          { type: "command", command: `bash ${quotePath(HOOKS_DIR_FWD + "/session-journal.sh")}`, timeout: 3000 },
+          { type: "command", command: `node ${quotePath(HOOKS_DIR_FWD + "/session-agency.js")}`, timeout: 10000 },
           { type: "command", command: findIndexNewCommand(), timeout: 10000 },
           { type: "command", command: findCorrectionExtractorCommand(), timeout: 5000 },
         ],
@@ -75,7 +75,7 @@ function buildSoulHooksConfig() {
       {
         matcher: "",
         hooks: [
-          { type: "command", command: `bash ${HOOKS_DIR_FWD}/session-scratchpad.sh`, timeout: 2000 },
+          { type: "command", command: `bash ${quotePath(HOOKS_DIR_FWD + "/session-scratchpad.sh")}`, timeout: 2000 },
         ],
       },
     ],
@@ -83,7 +83,7 @@ function buildSoulHooksConfig() {
       {
         matcher: "Write|Edit",
         hooks: [
-          { type: "command", command: `bash ${HOOKS_DIR_FWD}/write-guard.sh`, timeout: 2000 },
+          { type: "command", command: `bash ${quotePath(HOOKS_DIR_FWD + "/write-guard.sh")}`, timeout: 2000 },
         ],
       },
     ],
@@ -124,12 +124,25 @@ export async function upgradeCommand(): Promise<void> {
   // Re-register hooks in settings.json
   console.log("");
   console.log("  Re-registering hooks with Claude Code...");
+  // Distinguish "file missing" from "file exists but is invalid JSON".
+  // Overwriting unparseable settings.json silently erases every other tool's
+  // configuration; refuse to proceed in that case.
   let settings: Record<string, any> = {};
   try {
     const raw = await fs.readFile(CLAUDE_SETTINGS_PATH, "utf-8");
     settings = JSON.parse(raw);
-  } catch {
-    // No settings
+  } catch (err: unknown) {
+    const code = (err as NodeJS.ErrnoException)?.code;
+    if (code === "ENOENT") {
+      // No existing settings — start fresh.
+    } else if (err instanceof SyntaxError) {
+      throw new Error(
+        `[soul] ${CLAUDE_SETTINGS_PATH} exists but is not valid JSON (${err.message}). ` +
+          `Refusing to overwrite — fix or remove the file and re-run claude-soul upgrade.`,
+      );
+    } else {
+      throw err;
+    }
   }
 
   if (!settings.hooks) settings.hooks = {};

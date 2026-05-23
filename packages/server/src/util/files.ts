@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
+import crypto from "node:crypto";
 import type { SoulConfig } from "../types/config-types.js";
 import { DEFAULT_CONFIG } from "../types/config-types.js";
 
@@ -35,15 +36,26 @@ export async function readJsonSafe<T>(filePath: string, fallback: T): Promise<T>
   }
 }
 
+/**
+ * Atomic text-content file write. Writes to a `.tmp.{pid}-{uuid}` sidecar in
+ * the same directory, then renames into place — fs.rename is atomic on every
+ * platform Node supports, including overwriting an existing target on Windows
+ * (libuv MoveFileExW with MOVEFILE_REPLACE_EXISTING since Node 12.x).
+ *
+ * The PID + UUID combination prevents collisions between concurrent same-PID
+ * callers (e.g. two `appendSignals` calls racing inside one node process).
+ *
+ * `content: string` is a deliberate constraint — this util always encodes UTF-8.
+ * Callers needing Buffer/binary writes should use `fs.writeFile` directly.
+ */
 export async function writeFileAtomic(filePath: string, content: string): Promise<void> {
   const dir = path.dirname(filePath);
   await fs.mkdir(dir, { recursive: true });
-  const tmpPath = `${filePath}.tmp.${process.pid}`;
+  const tmpPath = `${filePath}.tmp.${process.pid}-${crypto.randomUUID()}`;
   try {
     await fs.writeFile(tmpPath, content, "utf-8");
     await fs.rename(tmpPath, filePath);
   } catch (err) {
-    // Clean up orphaned tmp file if write/rename failed mid-flight.
     await fs.unlink(tmpPath).catch(() => {});
     throw err;
   }

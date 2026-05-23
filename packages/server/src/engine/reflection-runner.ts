@@ -116,6 +116,15 @@ async function applyFrameworkEvolutions(
       }
       await engine.evolveFramework(evo.frameworkId, changes);
       updated++;
+    } else {
+      // Unknown action. The LLMReflectionResult.action union was narrowed to
+      // {refine, retire} — anything else here likely came from a stale prompt,
+      // an old persisted log, or an LLM hallucination. Surface so silent drops
+      // don't mask drift.
+      console.warn(
+        `[soul] applyFrameworkEvolutions: ignoring unrecognized action ` +
+          `"${evo.action}" for framework ${evo.frameworkId}.`,
+      );
     }
   }
 
