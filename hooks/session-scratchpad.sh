@@ -4,9 +4,9 @@
 # Zero context cost: no stdout, no stderr back to Claude.
 #
 # The scratchpad resets per session (keyed by PPID).
-# Claude reads /tmp/claude-scratchpad.md on demand when uncertain about prior actions.
+# Claude reads the scratchpad on demand when uncertain about prior actions.
 
-SCRATCHPAD="/tmp/claude-scratchpad.md"
+SCRATCHPAD="${TMPDIR:-/tmp}/claude-scratchpad.md"
 TIMESTAMP=$(date +%H:%M:%S)
 
 # Read first 4KB of stdin (enough for tool_name + tool_input, avoids slurping large outputs)

@@ -8,7 +8,8 @@ export async function createSnapshot(): Promise<string> {
   await fs.mkdir(SNAPSHOTS_DIR, { recursive: true });
 
   const timestamp = Date.now();
-  const snapshotName = `frameworks.v${timestamp}.json`;
+  const nonce = Math.random().toString(36).slice(2, 6);
+  const snapshotName = `frameworks.v${timestamp}-${nonce}.json`;
   const snapshotPath = path.join(SNAPSHOTS_DIR, snapshotName);
 
   try {

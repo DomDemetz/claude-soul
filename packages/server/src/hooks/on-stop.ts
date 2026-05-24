@@ -12,6 +12,8 @@
 
 import fs from "node:fs/promises";
 import { readFileSync } from "node:fs";
+import path from "node:path";
+import os from "node:os";
 import { parseTranscript, extractSignalsFromMessages } from "../engine/signal-extractor.js";
 import { appendSignals, getSignalCount } from "../engine/signal-store.js";
 import { StateEngine } from "../engine/state-engine.js";
@@ -135,7 +137,7 @@ async function main() {
 
     // Log signal extraction
     const logMsg = `[soul] ${signals.length} signal(s) extracted (${signals.map((s) => s.type).join(", ")}). Total: ${totalSignals}. Phase: ${meta.phase}. Thresholds: quick=${thresholds.quickSignals}, deep=${thresholds.deepSignals}.\n`;
-    await fs.appendFile("/tmp/soul-hook.log", logMsg, "utf-8").catch(() => {});
+    await fs.appendFile(path.join(os.tmpdir(), "soul-hook.log"), logMsg, "utf-8").catch(() => {});
 
     if (!config.reflection.enabled || totalSignals < thresholds.minSignals) {
       // Not enough signals for any reflection
@@ -164,22 +166,22 @@ async function main() {
           : `time-based: ${Math.round(timeSinceReflection / 60000)}min since last reflection`;
 
         const reflectLog = `[soul] Triggering ${tier} reflection (${reason}). Phase: ${meta.phase}.\n`;
-        await fs.appendFile("/tmp/soul-hook.log", reflectLog, "utf-8").catch(() => {});
+        await fs.appendFile(path.join(os.tmpdir(), "soul-hook.log"), reflectLog, "utf-8").catch(() => {});
 
         try {
           const result = await runReflection(tier);
           const resultLog = `[soul] ${tier} reflection complete: ${result.frameworksUpdated} updated, ${result.newFrameworks} new, ${result.retired} retired, ${result.lessonsGenerated} lessons.\n`;
-          await fs.appendFile("/tmp/soul-hook.log", resultLog, "utf-8").catch(() => {});
+          await fs.appendFile(path.join(os.tmpdir(), "soul-hook.log"), resultLog, "utf-8").catch(() => {});
         } catch (reflectErr) {
           const errLog = `[soul] ${tier} reflection failed: ${reflectErr}\n`;
-          await fs.appendFile("/tmp/soul-hook.log", errLog, "utf-8").catch(() => {});
+          await fs.appendFile(path.join(os.tmpdir(), "soul-hook.log"), errLog, "utf-8").catch(() => {});
         }
       }
     }
   } catch (err) {
     // Log errors but don't crash — hooks should be resilient
     const errMsg = `[soul] Stop hook error: ${err}\n`;
-    await fs.appendFile("/tmp/soul-hook.log", errMsg, "utf-8").catch(() => {});
+    await fs.appendFile(path.join(os.tmpdir(), "soul-hook.log"), errMsg, "utf-8").catch(() => {});
   }
 
   process.exit(0);
