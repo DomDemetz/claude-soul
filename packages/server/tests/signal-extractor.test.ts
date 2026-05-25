@@ -214,9 +214,9 @@ describe("parseTranscript", () => {
 
   it("filters out Skill tool result bodies posing as user content", () => {
     // The Skill tool returns SKILL.md content as a {type:'text'} block
-    // attached to a user-role message. Pre-fix this surfaced as user
-    // gratitude / correction signals — the source of the "all my Soul
-    // signals are corrupted self-references" symptom.
+    // attached to a user-role message. Pre-fix it pattern-matched as
+    // user gratitude / correction because the skill body contained
+    // words those regexes recognise.
     const jsonl = line({
       type: "user",
       uuid: "u1",
@@ -238,12 +238,69 @@ describe("parseTranscript", () => {
     expect(messages).toHaveLength(0);
   });
 
+  // Parameterised coverage for every INJECTED_PREFIX literal. Tests
+  // verify each prefix in the source list is actually wired into the
+  // filter — without these, a future edit could drop a literal from
+  // INJECTED_LITERAL_PREFIXES and the regression would be invisible.
+  describe.each([
+    ["<command-message>", "<command-message>run /foo</command-message>", "string"],
+    ["<command-args>", "<command-args>--verbose</command-args>", "string"],
+    ["[Request interrupted by user", "[Request interrupted by user for tool use]", "string"],
+    [
+      "This session is being continued",
+      "This session is being continued from a previous conversation that ran out of context.",
+      "string",
+    ],
+  ])("filters injected prefix %s (%s shape)", (_prefix, payload) => {
+    it("returns no messages for that entry", () => {
+      const jsonl = line({
+        type: "user",
+        uuid: "u1",
+        timestamp: "2026-05-25T10:00:00Z",
+        sessionId: "s1",
+        message: { role: "user", content: payload },
+      });
+      const messages = parseTranscript(jsonl);
+      expect(messages).toHaveLength(0);
+    });
+  });
+
+  it(
+    "filters per-block in mixed arrays — injected block stripped, genuine text survives",
+    () => {
+      // Realistic shape: Claude Code injects a <system-reminder> block
+      // alongside a genuine user continuation in the same array. The
+      // filter MUST operate per-block, not per-entry, or this composite
+      // case collapses to either "all noise" or "all silence" depending
+      // on which way the wrong filter goes.
+      const jsonl = line({
+        type: "user",
+        uuid: "u1",
+        timestamp: "2026-05-25T10:00:00Z",
+        sessionId: "s1",
+        message: {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: "<system-reminder>Todos updated.</system-reminder>",
+            },
+            { type: "text", text: "Please re-run the tests." },
+          ],
+        },
+      });
+
+      const messages = parseTranscript(jsonl);
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toEqual({ role: "user", text: "Please re-run the tests." });
+    },
+  );
+
   it("handles mixed-shape transcript without throwing", () => {
-    // The pre-fix bug surfaced as a swallowed TypeError on the FIRST
-    // string-content entry — subsequent entries on that same parse
-    // call were unaffected only because the try/catch ate the throw.
-    // This test guards against any regression that would crash on
-    // shape mismatch.
+    // Pre-fix, `.filter()` on a string content threw TypeError, which
+    // the outer try/catch swallowed — so the string-content entry was
+    // silently dropped. This test guards against any regression where
+    // shape-handling crashes the whole parse call.
     const jsonl = [
       line({
         type: "user",

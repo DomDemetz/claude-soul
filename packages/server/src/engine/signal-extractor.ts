@@ -215,9 +215,10 @@ type ContentBlock =
  *
  * `message.content` is a discriminated union: a bare string for genuine
  * human-typed user turns, and an array of content blocks for assistant
- * turns and for system-injected user-role messages (tool_result blocks,
- * system reminders, slash-command artifacts, Skill tool result bodies).
- * Treating it as always-array dropped every real user message.
+ * turns and for system-injected user-role messages — including (but not
+ * limited to) tool_result blocks, system reminders, slash-command
+ * artifacts, and Skill tool result bodies. Treating it as always-array
+ * dropped every real user message.
  */
 type TranscriptEntry = {
   type: "user" | "assistant" | "system" | "summary" | string;
@@ -235,52 +236,88 @@ type TranscriptEntry = {
  * rather than typed by the user. Keeping these out of the signal stream
  * is what prevents Skill tool result bodies (e.g. SKILL.md content) from
  * pattern-matching as user gratitude / corrections / completion signals.
+ *
+ * Each entry is a plain literal prefix; the matcher anchors at start-of-
+ * string with leading whitespace tolerance. Add new prefixes here as
+ * Claude Code introduces additional injected user-role content types.
  */
-const INJECTED_PREFIX =
-  /^\s*(<system-reminder>|<local-command-caveat>|<command-name>|<command-message>|<command-args>|Base directory for this skill:|\[Request interrupted by user|This session is being continued from a previous conversation)/;
+const INJECTED_LITERAL_PREFIXES: readonly string[] = [
+  // Reminder injections (todo, post-tool, etc.) — wrap as XML-ish tag
+  "<system-reminder>",
+  // Slash-command artifacts (`/clear`, `/help`, …)
+  "<local-command-caveat>",
+  "<command-name>",
+  "<command-message>",
+  "<command-args>",
+  // Skill tool result body — SKILL.md content delivered as a text block
+  "Base directory for this skill:",
+  // Interrupt + post-compact continuation banners
+  "[Request interrupted by user",
+  "This session is being continued from a previous conversation",
+];
+
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+const INJECTED_PREFIX = new RegExp(
+  "^\\s*(" + INJECTED_LITERAL_PREFIXES.map(escapeRegex).join("|") + ")",
+);
 
 /**
  * Parse a Claude Code transcript JSONL file into messages suitable for signal extraction.
+ *
+ * The per-line `try/catch` is narrowed to `JSON.parse` only. Shape-handling
+ * errors are NOT swallowed — they propagate so future schema drift in
+ * Claude Code's JSONL surfaces loudly instead of producing empty output.
  */
 export function parseTranscript(jsonlContent: string): TranscriptMessage[] {
   const lines = jsonlContent.split("\n").filter((l) => l.trim().length > 0);
   const messages: TranscriptMessage[] = [];
 
   for (const line of lines) {
+    let entry: TranscriptEntry;
     try {
-      const entry = JSON.parse(line) as TranscriptEntry;
-
-      if (entry.type !== "user" && entry.type !== "assistant") continue;
-      if (!entry.message?.content) continue;
-
-      const content = entry.message.content;
-      let text: string;
-
-      if (typeof content === "string") {
-        if (INJECTED_PREFIX.test(content)) continue;
-        text = content.trim();
-      } else if (Array.isArray(content)) {
-        const textParts = content
-          .filter((c): c is { type: "text"; text: string } =>
-            c.type === "text" && typeof (c as { text?: unknown }).text === "string",
-          )
-          .map((c) => c.text)
-          .filter((t) => !INJECTED_PREFIX.test(t));
-
-        text = textParts.join("\n").trim();
-      } else {
-        continue;
-      }
-
-      if (!text) continue;
-
-      messages.push({
-        role: entry.message.role,
-        text,
-      });
+      entry = JSON.parse(line) as TranscriptEntry;
     } catch {
-      // Skip malformed lines
+      // Skip malformed JSONL lines.
+      continue;
     }
+
+    if (entry.type !== "user" && entry.type !== "assistant") continue;
+    if (!entry.message?.content) continue;
+
+    const content = entry.message.content;
+    let text: string;
+
+    if (typeof content === "string") {
+      if (INJECTED_PREFIX.test(content)) continue;
+      text = content.trim();
+    } else if (Array.isArray(content)) {
+      const textParts = content
+        .filter((c): c is { type: "text"; text: string } =>
+          c.type === "text" && typeof (c as { text?: unknown }).text === "string",
+        )
+        .map((c) => c.text)
+        .filter((t) => !INJECTED_PREFIX.test(t));
+
+      text = textParts.join("\n").trim();
+    } else {
+      // Unknown content shape (neither string nor array). Log so future
+      // schema drift is observable rather than a silent skip.
+      console.error(
+        "[signal-extractor] parseTranscript: unknown content shape " +
+          `(type=${typeof content}); skipping entry uuid=${entry.uuid}`,
+      );
+      continue;
+    }
+
+    if (!text) continue;
+
+    messages.push({
+      role: entry.message.role,
+      text,
+    });
   }
 
   return messages;
