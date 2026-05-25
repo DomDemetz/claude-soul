@@ -212,6 +212,12 @@ type ContentBlock =
 
 /**
  * A single entry from the transcript JSONL file.
+ *
+ * `message.content` is a discriminated union: a bare string for genuine
+ * human-typed user turns, and an array of content blocks for assistant
+ * turns and for system-injected user-role messages (tool_result blocks,
+ * system reminders, slash-command artifacts, Skill tool result bodies).
+ * Treating it as always-array dropped every real user message.
  */
 type TranscriptEntry = {
   type: "user" | "assistant" | "system" | "summary" | string;
@@ -220,9 +226,18 @@ type TranscriptEntry = {
   sessionId: string;
   message?: {
     role: "user" | "assistant";
-    content: ContentBlock[];
+    content: string | ContentBlock[];
   };
 };
+
+/**
+ * Prefixes identifying user-role text that was injected by Claude Code
+ * rather than typed by the user. Keeping these out of the signal stream
+ * is what prevents Skill tool result bodies (e.g. SKILL.md content) from
+ * pattern-matching as user gratitude / corrections / completion signals.
+ */
+const INJECTED_PREFIX =
+  /^\s*(<system-reminder>|<local-command-caveat>|<command-name>|<command-message>|<command-args>|Base directory for this skill:|\[Request interrupted by user|This session is being continued from a previous conversation)/;
 
 /**
  * Parse a Claude Code transcript JSONL file into messages suitable for signal extraction.
@@ -238,11 +253,25 @@ export function parseTranscript(jsonlContent: string): TranscriptMessage[] {
       if (entry.type !== "user" && entry.type !== "assistant") continue;
       if (!entry.message?.content) continue;
 
-      const textParts = entry.message.content
-        .filter((c): c is { type: "text"; text: string } => c.type === "text")
-        .map((c) => c.text);
+      const content = entry.message.content;
+      let text: string;
 
-      const text = textParts.join("\n").trim();
+      if (typeof content === "string") {
+        if (INJECTED_PREFIX.test(content)) continue;
+        text = content.trim();
+      } else if (Array.isArray(content)) {
+        const textParts = content
+          .filter((c): c is { type: "text"; text: string } =>
+            c.type === "text" && typeof (c as { text?: unknown }).text === "string",
+          )
+          .map((c) => c.text)
+          .filter((t) => !INJECTED_PREFIX.test(t));
+
+        text = textParts.join("\n").trim();
+      } else {
+        continue;
+      }
+
       if (!text) continue;
 
       messages.push({
