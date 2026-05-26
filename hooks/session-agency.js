@@ -109,7 +109,9 @@ function evaluateConversation(conversation, sessionId) {
 }
 
 function logFindings(findings, sessionId) {
-  const log = loadJson(AGENCY_LOG, []);
+  let log = loadJson(AGENCY_LOG, []);
+  // Trim before pushing so the new entry is always included in the write
+  if (log.length >= 100) log = log.slice(-99);
   const entry = {
     session_id: sessionId,
     timestamp: new Date().toISOString(),
@@ -117,7 +119,6 @@ function logFindings(findings, sessionId) {
     actions_taken: [],
   };
   log.push(entry);
-  if (log.length > 100) log.splice(0, log.length - 100);
   saveJson(AGENCY_LOG, log);
   return entry;
 }
