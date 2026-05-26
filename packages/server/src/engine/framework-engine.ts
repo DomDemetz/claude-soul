@@ -34,6 +34,7 @@ export class FrameworkEngine {
       if (existing && existing.frameworks && existing.frameworks.length > 0) {
         let changed = this.migrateV2(existing);
         changed = this.migrateV3(existing) || changed;
+        changed = this.migrateV4(existing) || changed;
         changed = this.injectMissingSeeds(existing) || changed;
         if (changed) {
           await writeJsonAtomic(FRAMEWORKS_PATH, existing);
@@ -80,6 +81,7 @@ export class FrameworkEngine {
     const store = await readJsonSafe<FrameworkStore>(FRAMEWORKS_PATH, EMPTY_STORE);
     let changed = this.migrateV2(store);
     changed = this.migrateV3(store) || changed;
+    changed = this.migrateV4(store) || changed;
     changed = this.injectMissingSeeds(store) || changed;
     if (changed) {
       await writeJsonAtomic(FRAMEWORKS_PATH, store);
@@ -389,6 +391,27 @@ export class FrameworkEngine {
     }
 
     store.schemaVersion = 3;
+    return true;
+  }
+
+  /**
+   * V4 migration: coerce evidence type "refined" → "confirmed".
+   * "refined" was never written by any code path but may exist in frameworks.json
+   * files written by earlier development builds. Removing it from the type union
+   * without migration would leave a silent type lie in persisted data.
+   */
+  private migrateV4(store: FrameworkStore): boolean {
+    if ((store.schemaVersion ?? 0) >= 4) return false;
+
+    for (const fw of store.frameworks) {
+      for (const e of fw.evidence) {
+        if ((e.type as string) === "refined") {
+          e.type = "confirmed";
+        }
+      }
+    }
+
+    store.schemaVersion = 4;
     return true;
   }
 

@@ -29,7 +29,7 @@ export type EvidenceContext = "external" | "self-referential" | "persistence" | 
 
 export type FrameworkEvidence = {
   timestamp: number;
-  type: "confirmed" | "contradicted" | "refined";
+  type: "confirmed" | "contradicted";
   context: string;
   contextType?: EvidenceContext;
 };
