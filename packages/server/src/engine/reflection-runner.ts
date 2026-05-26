@@ -309,11 +309,15 @@ export async function runReflection(
 
     if (exemplarCandidates.length > 0) {
       const existingExemplars = await readJsonSafe<Exemplar[]>(EXEMPLARS_PATH, []);
-      const activeNames = store.frameworks.filter((f) => f.status === "active").map((f) => f.name);
+      const activeFrameworks = store.frameworks
+        .filter((f) => f.status === "active")
+        .sort((a, b) => b.confidence - a.confidence);
+      const activeNames = activeFrameworks.map((f) => f.name);
+      const primaryDomain = activeFrameworks[0]?.domain ?? "general";
       const newExemplars: Exemplar[] = exemplarCandidates.map((e) => ({
         id: `ex-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         context: e.context.slice(0, 200), responseExcerpt: e.responseExcerpt.slice(0, 500),
-        frameworksActive: activeNames.slice(0, 5), domain: "general",
+        frameworksActive: activeNames.slice(0, 5), domain: primaryDomain,
         signals: e.signals, createdAt: Date.now(),
       }));
       await writeJsonAtomic(EXEMPLARS_PATH, [...existingExemplars, ...newExemplars].slice(-config.exemplars.maxCount));

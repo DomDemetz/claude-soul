@@ -14,6 +14,7 @@ import {
   LESSONS_PATH,
 } from "../util/files.js";
 import { readJsonSafe } from "../util/files.js";
+import { selectTopLessons } from "./lesson-store.js";
 import { FrameworkEngine } from "./framework-engine.js";
 import type { SoulConfig } from "../types/config-types.js";
 
@@ -151,9 +152,7 @@ export async function assembleSoulContext(config: SoulConfig): Promise<string> {
     });
   }
 
-  const topLessons = lessons
-    .sort((a, b) => b.confidence - a.confidence)
-    .slice(0, config.lessons.maxInjectCount);
+  const topLessons = selectTopLessons(lessons, config.lessons.maxInjectCount);
 
   if (topLessons.length > 0) {
     const lessonsContent =

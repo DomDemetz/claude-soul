@@ -84,9 +84,12 @@ export class StateEngine {
 
     switch (event.type) {
       case "session_start":
-        this.state.confidence = 0.6;
+        // Decay toward baseline rather than hard-resetting, so cross-session
+        // signal compounds. frustration and mood hard-reset: frustration is
+        // session-scoped by design, mood self-regresses each event anyway.
+        this.state.confidence = clamp(this.state.confidence * 0.85 + 0.6 * 0.15);
+        this.state.curiosity = clamp(this.state.curiosity * 0.85 + 0.5 * 0.15);
         this.state.frustration = 0.0;
-        this.state.curiosity = 0.5;
         this.state.mood = MOOD_BASELINE;
         break;
       case "positive_interaction":
