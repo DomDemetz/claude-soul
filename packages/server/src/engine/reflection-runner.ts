@@ -26,7 +26,7 @@ import {
   LESSONS_PATH,
   EXEMPLARS_PATH,
 } from "../util/files.js";
-import { readJsonSafe, writeJsonAtomic } from "../util/files.js";
+import { readJsonSafe, writeJsonAtomic, writeFileAtomic } from "../util/files.js";
 import type { Lesson, Exemplar } from "../types/learning-types.js";
 import fs from "node:fs/promises";
 import { callClaude, parseLlmJson as parseReflectionJson } from "../util/llm.js";
@@ -127,6 +127,15 @@ async function applyFrameworkEvolutions(
       }
       await engine.evolveFramework(evo.frameworkId, changes);
       updated++;
+    } else {
+      // Unknown action. The LLMReflectionResult.action union was narrowed to
+      // {refine, retire} — anything else here likely came from a stale prompt,
+      // an old persisted log, or an LLM hallucination. Surface so silent drops
+      // don't mask drift.
+      console.warn(
+        `[soul] applyFrameworkEvolutions: ignoring unrecognized action ` +
+          `"${evo.action}" for framework ${evo.frameworkId}.`,
+      );
     }
   }
 
@@ -157,7 +166,7 @@ async function finalizeReflection(
 ): Promise<void> {
   const updatedStore = await engine.loadStore();
   const frameworksMd = renderFrameworksToMarkdown(updatedStore);
-  await fs.writeFile(soulFilePath("FRAMEWORKS.md"), frameworksMd, "utf-8");
+  await writeFileAtomic(soulFilePath("FRAMEWORKS.md"), frameworksMd);
 
   updatedStore.meta.reflectionCount++;
   updatedStore.meta.lastReflectionAt = Date.now();

@@ -1,6 +1,5 @@
-import fs from "node:fs/promises";
 import { assembleSoulContext, assembleSlimContext } from "../engine/context-assembler.js";
-import { loadConfig, ensureDirs, soulFilePath } from "../util/files.js";
+import { loadConfig, ensureDirs, soulFilePath, writeFileAtomic } from "../util/files.js";
 import { FrameworkEngine } from "../engine/framework-engine.js";
 import { renderFrameworksToMarkdown } from "../engine/framework-renderer.js";
 import { StateEngine } from "../engine/state-engine.js";
@@ -21,7 +20,7 @@ export async function handleSoulContext(
   const frameworkEngine = new FrameworkEngine();
   const store = await frameworkEngine.initialize();
   const frameworksMd = renderFrameworksToMarkdown(store);
-  await fs.writeFile(soulFilePath("FRAMEWORKS.md"), frameworksMd, "utf-8");
+  await writeFileAtomic(soulFilePath("FRAMEWORKS.md"), frameworksMd);
 
   const stateEngine = new StateEngine();
   await stateEngine.load();

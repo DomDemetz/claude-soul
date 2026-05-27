@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import fs from "node:fs/promises";
 import type {
   Framework,
   FrameworkStore,
@@ -29,21 +30,63 @@ export class FrameworkEngine {
   private store: FrameworkStore | null = null;
 
   async initialize(): Promise<FrameworkStore> {
+    let existing: FrameworkStore | null = null;
+    let parsedSuccessfully = false;
     try {
-      const existing = await readJsonSafe<FrameworkStore | null>(FRAMEWORKS_PATH, null);
-      if (existing && existing.frameworks && existing.frameworks.length > 0) {
-        let changed = this.migrateV2(existing);
-        changed = this.migrateV3(existing) || changed;
-        changed = this.migrateV4(existing) || changed;
-        changed = this.injectMissingSeeds(existing) || changed;
-        if (changed) {
-          await writeJsonAtomic(FRAMEWORKS_PATH, existing);
+      const raw = await fs.readFile(FRAMEWORKS_PATH, "utf-8");
+      existing = JSON.parse(raw) as FrameworkStore;
+      parsedSuccessfully = true;
+    } catch (err: unknown) {
+      const code = (err as NodeJS.ErrnoException)?.code;
+      if (code === "ENOENT") {
+        // First run — silently fall through to seed.
+      } else if (err instanceof SyntaxError) {
+        // True JSON corruption: back up the existing file before re-seeding so
+        // the user's learned data isn't silently overwritten on the next save.
+        // If the backup itself fails we refuse to proceed — overwriting a file
+        // we couldn't preserve is worse than aborting startup.
+        const bakPath = `${FRAMEWORKS_PATH}.corrupted.${Date.now()}.bak`;
+        try {
+          await fs.copyFile(FRAMEWORKS_PATH, bakPath);
+        } catch (bakErr) {
+          const bakMsg = (bakErr as Error)?.message ?? String(bakErr);
+          throw new Error(
+            `[soul] frameworks.json is corrupted (${err.message}) and the backup to ` +
+              `${bakPath} also failed (${bakMsg}). Refusing to re-seed to avoid data loss. ` +
+              `Manually inspect ${FRAMEWORKS_PATH}.`,
+          );
         }
-        this.store = existing;
-        return existing;
+        console.error(
+          `[soul] frameworks.json failed to parse (${err.message}). ` +
+            `Backed up to ${bakPath}. Re-seeding from defaults.`,
+        );
+      } else {
+        // EACCES / EISDIR / EMFILE / etc — operational error, not corruption.
+        // Re-throw so the user sees the real problem instead of silently
+        // losing data on the next write.
+        throw err;
       }
-    } catch {
-      // Fall through to create new store
+    }
+
+    if (parsedSuccessfully && existing && Array.isArray(existing.frameworks) && existing.frameworks.length > 0) {
+      let changed = this.migrateV2(existing);
+      changed = this.migrateV3(existing) || changed;
+      changed = this.migrateV4(existing) || changed;
+      changed = this.injectMissingSeeds(existing) || changed;
+      if (changed) {
+        await writeJsonAtomic(FRAMEWORKS_PATH, existing);
+      }
+      this.store = existing;
+      return existing;
+    }
+
+    if (parsedSuccessfully) {
+      // File parsed cleanly but was empty or had no frameworks. Don't silently
+      // overwrite — it might be intentional state (all frameworks retired).
+      // Log so the re-seed is visible.
+      console.error(
+        `[soul] frameworks.json parsed cleanly but contained no frameworks. Re-seeding from defaults.`,
+      );
     }
 
     const now = Date.now();

@@ -258,7 +258,7 @@ export function buildMetaReflectionPrompt(params: {
           { frameworkId: "string", currentTier: "hypothesis|observed|validated", recommendedTier: "hypothesis|observed|validated", reason: "string" },
         ],
         frameworkEvolutions: [
-          { frameworkId: "string", action: "refine|merge|retire|split", detail: "string (MUST be the complete new description text, NOT an instruction about what to change)", status: "active|questioning (optional, only if status should change)" },
+          { frameworkId: "string", action: "refine|retire", detail: "string (MUST be the complete new description text, NOT an instruction about what to change)", status: "active|questioning (optional, only if status should change)" },
         ],
         newFrameworks: [
           { name: "string", description: "string", domain: "string", confidence: 0.3 },
@@ -397,7 +397,7 @@ export function buildDeepReflectionPrompt(params: {
           { name: "string", description: "string", domain: "string", confidence: 0.3 },
         ],
         frameworkEvolutions: [
-          { frameworkId: "string", action: "refine|merge|retire|split", detail: "string (MUST be the complete new description text, NOT an instruction about what to change)", status: "active|questioning (optional, only if status should change)" },
+          { frameworkId: "string", action: "refine|retire", detail: "string (MUST be the complete new description text, NOT an instruction about what to change)", status: "active|questioning (optional, only if status should change)" },
         ],
         tensionUpdates: [
           {

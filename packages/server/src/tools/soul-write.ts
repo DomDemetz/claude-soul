@@ -1,5 +1,4 @@
-import fs from "node:fs/promises";
-import { soulFilePath, ensureDirs } from "../util/files.js";
+import { soulFilePath, ensureDirs, writeFileAtomic } from "../util/files.js";
 
 const WRITABLE_FILES = [
   "SOUL.md",
@@ -28,6 +27,6 @@ export async function handleSoulWrite(
 
   await ensureDirs();
   const filePath = soulFilePath(fileName);
-  await fs.writeFile(filePath, content, "utf-8");
+  await writeFileAtomic(filePath, content);
   return `Successfully wrote ${fileName} (${content.length} chars)`;
 }

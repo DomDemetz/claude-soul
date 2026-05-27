@@ -5,6 +5,7 @@ import os from "node:os";
 import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
+import { writeFileAtomic } from "../util/atomic-write.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,6 +14,9 @@ const require = createRequire(import.meta.url);
 const SOUL_DIR = path.join(os.homedir(), ".soul");
 const HOOKS_DIR = path.join(SOUL_DIR, "hooks");
 const CLAUDE_SETTINGS_PATH = path.join(os.homedir(), ".claude", "settings.json");
+
+// Forward-slash version of HOOKS_DIR for use in shell commands (bash requires / on Windows too)
+const HOOKS_DIR_FWD = HOOKS_DIR.replace(/\\/g, "/");
 
 function quotePath(p: string): string {
   return `"${p.replace(/(["$`])/g, "\\$1")}"`;
@@ -60,8 +64,8 @@ function buildSoulHooksConfig() {
         matcher: "",
         hooks: [
           { type: "command", command: findOnStopCommand(), timeout: 15000 },
-          { type: "command", command: `bash ${HOOKS_DIR}/session-journal.sh`, timeout: 3000 },
-          { type: "command", command: `node ${HOOKS_DIR}/session-agency.js`, timeout: 10000 },
+          { type: "command", command: `bash ${quotePath(HOOKS_DIR_FWD + "/session-journal.sh")}`, timeout: 3000 },
+          { type: "command", command: `node ${quotePath(HOOKS_DIR_FWD + "/session-agency.js")}`, timeout: 10000 },
           { type: "command", command: findIndexNewCommand(), timeout: 10000 },
           { type: "command", command: findCorrectionExtractorCommand(), timeout: 5000 },
         ],
@@ -71,7 +75,7 @@ function buildSoulHooksConfig() {
       {
         matcher: "",
         hooks: [
-          { type: "command", command: `bash ${HOOKS_DIR}/session-scratchpad.sh`, timeout: 2000 },
+          { type: "command", command: `bash ${quotePath(HOOKS_DIR_FWD + "/session-scratchpad.sh")}`, timeout: 2000 },
         ],
       },
     ],
@@ -79,7 +83,7 @@ function buildSoulHooksConfig() {
       {
         matcher: "Write|Edit",
         hooks: [
-          { type: "command", command: `bash ${HOOKS_DIR}/write-guard.sh`, timeout: 2000 },
+          { type: "command", command: `bash ${quotePath(HOOKS_DIR_FWD + "/write-guard.sh")}`, timeout: 2000 },
         ],
       },
     ],
@@ -120,12 +124,25 @@ export async function upgradeCommand(): Promise<void> {
   // Re-register hooks in settings.json
   console.log("");
   console.log("  Re-registering hooks with Claude Code...");
+  // Distinguish "file missing" from "file exists but is invalid JSON".
+  // Overwriting unparseable settings.json silently erases every other tool's
+  // configuration; refuse to proceed in that case.
   let settings: Record<string, any> = {};
   try {
     const raw = await fs.readFile(CLAUDE_SETTINGS_PATH, "utf-8");
     settings = JSON.parse(raw);
-  } catch {
-    // No settings
+  } catch (err: unknown) {
+    const code = (err as NodeJS.ErrnoException)?.code;
+    if (code === "ENOENT") {
+      // No existing settings — start fresh.
+    } else if (err instanceof SyntaxError) {
+      throw new Error(
+        `[soul] ${CLAUDE_SETTINGS_PATH} exists but is not valid JSON (${err.message}). ` +
+          `Refusing to overwrite — fix or remove the file and re-run claude-soul upgrade.`,
+      );
+    } else {
+      throw err;
+    }
   }
 
   if (!settings.hooks) settings.hooks = {};
@@ -153,7 +170,7 @@ export async function upgradeCommand(): Promise<void> {
     }
   }
 
-  await fs.writeFile(CLAUDE_SETTINGS_PATH, JSON.stringify(settings, null, 2));
+  await writeFileAtomic(CLAUDE_SETTINGS_PATH, JSON.stringify(settings, null, 2));
   console.log("  [ok] Hooks registered (new hooks added, existing kept)");
 
   // Re-register MCP server

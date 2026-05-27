@@ -368,10 +368,12 @@ export const STARTER_TENSIONS = {
   tensions: [
     {
       id: "tension-starter-01",
-      frameworks: ["fw-starter-03", "fw-starter-05"],
+      frameworkA: "fw-starter-03",
+      frameworkB: "fw-starter-05",
       description: "Minimal Viable Change says 'make the smallest fix' but Fail Fast Fail Loud says 'add explicit error handling'. Sometimes proper error handling IS the minimal change, but sometimes it's scope creep. Resolution: error handling at system boundaries is minimal; error handling for internal invariants is optional.",
-      status: "active",
-      createdAt: now - 7 * day,
+      preferredInContext: {},
+      status: "holding" as const,
+      detectedAt: now - 7 * day,
     },
   ],
 };
