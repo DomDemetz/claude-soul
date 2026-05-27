@@ -137,13 +137,30 @@ export class StateEngine {
     const followUpsPath = path.join(DATA_DIR, "follow-ups.json");
     const followUps = await readJsonSafe<FollowUp[]>(followUpsPath, []);
 
+    // B-contract (issue #6): the session log persists signals across cycles
+    // with per-tier `consumedBy` markers, so total-queue size no longer maps
+    // to "pending". Break it down: total in log, pending-quick, pending-deep.
     let signalCount = 0;
     let correctionCount = 0;
+    let pendingQuick = 0;
+    let pendingDeep = 0;
     try {
       const logContent = await fs.readFile(SESSION_LOG_PATH, "utf8");
       const lines = logContent.split("\n").filter((l) => l.trim());
       signalCount = lines.length;
       correctionCount = lines.filter((l) => l.includes('"correction"')).length;
+      for (const line of lines) {
+        try {
+          const parsed = JSON.parse(line) as { consumedBy?: Array<{ tier: string }> };
+          const tiers = new Set((parsed.consumedBy ?? []).map((c) => c.tier));
+          if (!tiers.has("quick")) pendingQuick++;
+          if (!tiers.has("deep")) pendingDeep++;
+        } catch {
+          // malformed line — count as pending for both tiers (conservative)
+          pendingQuick++;
+          pendingDeep++;
+        }
+      }
     } catch {
       // no signals yet
     }
@@ -164,7 +181,7 @@ export class StateEngine {
 ## System
 - Learning phase: ${meta.phase ?? "apprentice"} (${meta.reflectionCount ?? 0} reflections)
 - Frameworks: ${active} active, ${questioning} questioning, ${retired} retired
-- Signals recorded: ${signalCount} (${correctionCount} corrections)
+- Signals: ${signalCount} total (${pendingQuick} pending quick, ${pendingDeep} pending deep, ${correctionCount} corrections)
 - Unresolved follow-ups: ${unresolvedFollowUps.length}${unresolvedFollowUps.length > 0 ? "\n" + unresolvedFollowUps.map((f) => `  - ${f.summary ?? "(no summary)"}`).join("\n") : ""}
 `;
 
