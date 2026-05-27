@@ -9,6 +9,7 @@ import {
   soulFilePath,
 } from "../util/files.js";
 import { readJsonSafe, writeJsonAtomic } from "../util/files.js";
+import { countPendingByTier } from "./signal-store.js";
 import fs from "node:fs/promises";
 import path from "node:path";
 
@@ -137,13 +138,22 @@ export class StateEngine {
     const followUpsPath = path.join(DATA_DIR, "follow-ups.json");
     const followUps = await readJsonSafe<FollowUp[]>(followUpsPath, []);
 
+    // B-contract (issue #6): the session log persists signals across cycles
+    // with per-tier `consumedBy` markers, so total-queue size no longer maps
+    // to "pending". Delegate the per-tier breakdown to the shared helper so
+    // STATE.md and `claude-soul status` can't drift.
     let signalCount = 0;
     let correctionCount = 0;
+    let pendingQuick = 0;
+    let pendingDeep = 0;
     try {
       const logContent = await fs.readFile(SESSION_LOG_PATH, "utf8");
       const lines = logContent.split("\n").filter((l) => l.trim());
-      signalCount = lines.length;
-      correctionCount = lines.filter((l) => l.includes('"correction"')).length;
+      const counts = countPendingByTier(lines);
+      signalCount = counts.total;
+      pendingQuick = counts.pendingQuick;
+      pendingDeep = counts.pendingDeep;
+      correctionCount = counts.corrections;
     } catch {
       // no signals yet
     }
@@ -164,7 +174,7 @@ export class StateEngine {
 ## System
 - Learning phase: ${meta.phase ?? "apprentice"} (${meta.reflectionCount ?? 0} reflections)
 - Frameworks: ${active} active, ${questioning} questioning, ${retired} retired
-- Signals recorded: ${signalCount} (${correctionCount} corrections)
+- Signals: ${signalCount} total (${pendingQuick} pending quick, ${pendingDeep} pending deep, ${correctionCount} corrections)
 - Unresolved follow-ups: ${unresolvedFollowUps.length}${unresolvedFollowUps.length > 0 ? "\n" + unresolvedFollowUps.map((f) => `  - ${f.summary ?? "(no summary)"}`).join("\n") : ""}
 `;
 

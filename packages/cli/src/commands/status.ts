@@ -38,13 +38,38 @@ export async function statusCommand(): Promise<void> {
     console.log("  Frameworks: not initialized yet");
   }
 
-  // Signals
+  // Signals — per-tier under B-contract (issue #6): total queue size is no
+  // longer the same as "pending" because signals persist across reflections.
+  // CLI-side mirror of packages/server/src/engine/signal-store.ts#countPendingByTier.
+  // Kept in lockstep with the server copy (the CLI is a separate package and
+  // does not cross-import the server runtime; see packages/cli/src/util/atomic-write.ts
+  // for the same pattern).
   try {
     const content = await fs.readFile(path.join(DATA_DIR, "session-log.jsonl"), "utf-8");
     const lines = content.split("\n").filter((l) => l.trim());
-    console.log(`  Signals pending: ${lines.length}`);
+    let pendingQuick = 0;
+    let pendingDeep = 0;
+    let corrections = 0;
+    for (const line of lines) {
+      try {
+        const parsed = JSON.parse(line) as {
+          type?: string;
+          consumedBy?: Array<{ tier: string }>;
+        };
+        const tiers = new Set((parsed.consumedBy ?? []).map((c) => c.tier));
+        if (!tiers.has("quick")) pendingQuick++;
+        if (!tiers.has("deep")) pendingDeep++;
+        if (parsed.type === "correction") corrections++;
+      } catch {
+        pendingQuick++;
+        pendingDeep++;
+      }
+    }
+    console.log(
+      `  Signals: ${lines.length} total (${pendingQuick} pending quick, ${pendingDeep} pending deep, ${corrections} corrections)`,
+    );
   } catch {
-    console.log("  Signals pending: 0");
+    console.log("  Signals: 0 total");
   }
 
   // Meta

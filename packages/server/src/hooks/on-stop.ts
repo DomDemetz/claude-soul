@@ -15,12 +15,16 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { parseTranscript, extractSignalsFromMessages } from "../engine/signal-extractor.js";
-import { appendSignals, getSignalCount } from "../engine/signal-store.js";
+import { appendSignals, getUnconsumedCounts } from "../engine/signal-store.js";
 import { StateEngine } from "../engine/state-engine.js";
 import { ensureDirs, loadConfig, FRAMEWORKS_PATH } from "../util/files.js";
 import { readJsonSafe } from "../util/files.js";
 import { runReflection } from "../engine/reflection-runner.js";
-import { loadMeta, getReflectionThresholds } from "../engine/meta-optimizer.js";
+import {
+  loadMeta,
+  getReflectionThresholds,
+  selectReflectionTier,
+} from "../engine/meta-optimizer.js";
 import type { FrameworkStore } from "../types/learning-types.js";
 
 type StopHookInput = {
@@ -123,9 +127,13 @@ async function main() {
 
     await stateEngine.tick();
 
-    // Check if reflection is due (phase-adaptive thresholds + time-based fallback)
+    // Check if reflection is due (phase-adaptive thresholds + time-based fallback).
+    // B-contract (issue #6): trigger logic now uses per-tier unconsumed counts
+    // rather than raw queue size, so quick consuming signals doesn't starve deep.
     const config = await loadConfig();
-    const totalSignals = await getSignalCount();
+    // Single snapshot: avoids two sequential reads of the JSONL with a
+    // potential write between them, and halves the IO cost on hot path.
+    const { quick: quickUnconsumed, deep: deepUnconsumed } = await getUnconsumedCounts();
     const meta = await loadMeta();
     const thresholds = getReflectionThresholds(meta);
 
@@ -135,47 +143,34 @@ async function main() {
     });
     const timeSinceReflection = Date.now() - store.meta.lastReflectionAt;
 
-    // Log signal extraction
-    const logMsg = `[soul] ${signals.length} signal(s) extracted (${signals.map((s) => s.type).join(", ")}). Total: ${totalSignals}. Phase: ${meta.phase}. Thresholds: quick=${thresholds.quickSignals}, deep=${thresholds.deepSignals}.\n`;
+    const logMsg = `[soul] ${signals.length} signal(s) extracted (${signals.map((s) => s.type).join(", ")}). Pending: quick=${quickUnconsumed}, deep=${deepUnconsumed}. Phase: ${meta.phase}. Thresholds: quick=${thresholds.quickSignals}, deep=${thresholds.deepSignals}.\n`;
     await fs.appendFile(path.join(os.tmpdir(), "soul-hook.log"), logMsg, "utf-8").catch(() => {});
 
-    if (!config.reflection.enabled || totalSignals < thresholds.minSignals) {
-      // Not enough signals for any reflection
-    } else {
-      // Determine which tier to run
-      let tier: "quick" | "deep" | null = null;
+    const tier = selectReflectionTier({
+      quickUnconsumed,
+      deepUnconsumed,
+      timeSinceReflectionMs: timeSinceReflection,
+      thresholds,
+      enabled: config.reflection.enabled,
+    });
 
-      // Deep reflection: signal threshold OR time threshold
-      if (
-        totalSignals >= thresholds.deepSignals ||
-        (timeSinceReflection >= thresholds.deepTimeMs && totalSignals >= thresholds.minSignals)
-      ) {
-        tier = "deep";
-      }
-      // Quick reflection: signal threshold OR time threshold
-      else if (
-        totalSignals >= thresholds.quickSignals ||
-        (timeSinceReflection >= thresholds.quickTimeMs && totalSignals >= thresholds.minSignals)
-      ) {
-        tier = "quick";
-      }
+    if (tier) {
+      const tierUnconsumed = tier === "deep" ? deepUnconsumed : quickUnconsumed;
+      const tierThreshold = tier === "deep" ? thresholds.deepSignals : thresholds.quickSignals;
+      const reason = tierUnconsumed >= tierThreshold
+        ? `${tierUnconsumed} unconsumed-${tier} signals >= ${tierThreshold} threshold`
+        : `time-based: ${Math.round(timeSinceReflection / 60000)}min since last reflection`;
 
-      if (tier) {
-        const reason = totalSignals >= (tier === "deep" ? thresholds.deepSignals : thresholds.quickSignals)
-          ? `${totalSignals} signals >= ${tier === "deep" ? thresholds.deepSignals : thresholds.quickSignals} threshold`
-          : `time-based: ${Math.round(timeSinceReflection / 60000)}min since last reflection`;
+      const reflectLog = `[soul] Triggering ${tier} reflection (${reason}). Phase: ${meta.phase}.\n`;
+      await fs.appendFile(path.join(os.tmpdir(), "soul-hook.log"), reflectLog, "utf-8").catch(() => {});
 
-        const reflectLog = `[soul] Triggering ${tier} reflection (${reason}). Phase: ${meta.phase}.\n`;
-        await fs.appendFile(path.join(os.tmpdir(), "soul-hook.log"), reflectLog, "utf-8").catch(() => {});
-
-        try {
-          const result = await runReflection(tier);
-          const resultLog = `[soul] ${tier} reflection complete: ${result.frameworksUpdated} updated, ${result.newFrameworks} new, ${result.retired} retired, ${result.lessonsGenerated} lessons.\n`;
-          await fs.appendFile(path.join(os.tmpdir(), "soul-hook.log"), resultLog, "utf-8").catch(() => {});
-        } catch (reflectErr) {
-          const errLog = `[soul] ${tier} reflection failed: ${reflectErr}\n`;
-          await fs.appendFile(path.join(os.tmpdir(), "soul-hook.log"), errLog, "utf-8").catch(() => {});
-        }
+      try {
+        const result = await runReflection(tier);
+        const resultLog = `[soul] ${tier} reflection complete: ${result.frameworksUpdated} updated, ${result.newFrameworks} new, ${result.retired} retired, ${result.lessonsGenerated} lessons.\n`;
+        await fs.appendFile(path.join(os.tmpdir(), "soul-hook.log"), resultLog, "utf-8").catch(() => {});
+      } catch (reflectErr) {
+        const errLog = `[soul] ${tier} reflection failed: ${reflectErr}\n`;
+        await fs.appendFile(path.join(os.tmpdir(), "soul-hook.log"), errLog, "utf-8").catch(() => {});
       }
     }
   } catch (err) {

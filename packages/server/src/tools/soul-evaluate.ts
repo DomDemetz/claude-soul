@@ -41,6 +41,7 @@ export async function handleSoulEvaluate(
       confidence: 0.6 * selfWeight,
       userSnippets: [],
       assistantSnippets: [],
+      consumedBy: [],
     });
   }
 
@@ -54,6 +55,7 @@ export async function handleSoulEvaluate(
       confidence: 0.6 * selfWeight,
       userSnippets: [],
       assistantSnippets: [],
+      consumedBy: [],
     });
   }
 
@@ -67,6 +69,7 @@ export async function handleSoulEvaluate(
       confidence: 0.5 * selfWeight,
       userSnippets: [],
       assistantSnippets: [],
+      consumedBy: [],
     });
   }
 
@@ -80,6 +83,7 @@ export async function handleSoulEvaluate(
       confidence: 0.5 * selfWeight,
       userSnippets: [],
       assistantSnippets: [],
+      consumedBy: [],
     });
   }
 
@@ -94,6 +98,7 @@ export async function handleSoulEvaluate(
       confidence: 0.4 * selfWeight,
       userSnippets: [],
       assistantSnippets: [],
+      consumedBy: [],
     });
   }
 

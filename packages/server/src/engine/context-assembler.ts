@@ -4,7 +4,7 @@ import type { TensionState } from "../types/learning-types.js";
 import { renderFrameworksToMarkdown, renderFrameworksCompressed } from "./framework-renderer.js";
 import { transformShadowContent } from "./shadow-transform.js";
 import { applyTokenBudget, type ContentBlock } from "./token-budget.js";
-import { readSignals } from "./signal-store.js";
+import { readUnconsumed } from "./signal-store.js";
 import {
   soulFilePath,
   readFileSafe,
@@ -108,7 +108,10 @@ export async function assembleSoulContext(config: SoulConfig): Promise<string> {
   const exemplars = await readJsonSafe<Exemplar[]>(EXEMPLARS_PATH, []);
   const lessons = await readJsonSafe<Lesson[]>(LESSONS_PATH, []);
   const tensions = await readJsonSafe<TensionState>(TENSIONS_PATH, { tensions: [] });
-  const recentSignals = await readSignals();
+  // B-contract (issue #6): filter to signals not yet consumed by quick
+  // reflection, so already-absorbed evidence doesn't re-surface in context
+  // and re-prime the same Recent Patterns warnings on every session start.
+  const recentSignals = await readUnconsumed("quick");
 
   const blocks: ContentBlock[] = [];
 

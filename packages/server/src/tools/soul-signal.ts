@@ -24,6 +24,7 @@ export async function handleSoulSignal(signals: SignalInput[]): Promise<string> 
     confidence: s.confidence ?? 0.7,
     userSnippets: [],
     assistantSnippets: [],
+    consumedBy: [],
   }));
 
   await appendSignals(microSignals);

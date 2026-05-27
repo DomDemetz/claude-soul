@@ -69,6 +69,14 @@ export type FrameworkStore = {
   };
 };
 
+export type ReflectionTier = "quick" | "deep";
+
+export type ConsumedByEntry = {
+  tier: ReflectionTier;
+  reflectionId: string;
+  timestamp: number;
+};
+
 export type MicroSignal = {
   timestamp: number;
   sessionKey: string;
@@ -78,6 +86,7 @@ export type MicroSignal = {
   confidence: number;
   userSnippets: string[];
   assistantSnippets: string[];
+  consumedBy: ConsumedByEntry[];
 };
 
 export type SignalType =

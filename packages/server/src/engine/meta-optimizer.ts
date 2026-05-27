@@ -158,7 +158,67 @@ export function getReflectionThresholds(meta: MetaState): {
         deepTimeMs: 48 * 60 * 60 * 1000,    // 48 hours
         minSignals: 3,
       };
+    default:
+      // Disk-loaded MetaState can carry a phase value outside the declared
+      // union if the JSON has drifted (manual edit, future schema, corrupted
+      // file). Without a default branch the function returns undefined and
+      // downstream destructuring of `thresholds.minSignals` crashes the stop
+      // hook. Fall back to apprentice thresholds — most frequent reflection,
+      // least risk of starving the learning loop.
+      return {
+        quickSignals: 5,
+        deepSignals: 25,
+        quickTimeMs: 2 * 60 * 60 * 1000,
+        deepTimeMs: 12 * 60 * 60 * 1000,
+        minSignals: 3,
+      };
   }
+}
+
+/**
+ * Decide which reflection tier (if any) should fire given per-tier unconsumed
+ * counts and elapsed time since the last reflection. Pure policy function;
+ * filesystem and trigger wiring live in on-stop.ts.
+ *
+ * The B contract for issue #6 requires per-tier counts (not raw queue size)
+ * because signals now persist across reflections via `consumedBy` tracking.
+ *
+ * Deep preempts quick in ALL scenarios where deep's own trigger fires — both
+ * its count threshold AND its time fallback — so the higher-evidence
+ * reflection runs on rich evidence whenever it qualifies. Pre-#6 wipe
+ * semantics defeated this; the tier ladder collapsed to single-tier in
+ * practice because quick always wiped before deep accumulated.
+ *
+ * Time fallback requires the tier's unconsumed count to meet `minSignals`,
+ * which prevents a 24h-elapsed sparse-trailing trigger on near-empty state.
+ */
+export function selectReflectionTier(input: {
+  quickUnconsumed: number;
+  deepUnconsumed: number;
+  timeSinceReflectionMs: number;
+  thresholds: {
+    minSignals: number;
+    quickSignals: number;
+    deepSignals: number;
+    quickTimeMs: number;
+    deepTimeMs: number;
+  };
+  enabled: boolean;
+}): import("../types/learning-types.js").ReflectionTier | null {
+  const { quickUnconsumed, deepUnconsumed, timeSinceReflectionMs, thresholds, enabled } = input;
+  if (!enabled) return null;
+
+  const deepCountReached = deepUnconsumed >= thresholds.deepSignals;
+  const deepTimeReached =
+    timeSinceReflectionMs >= thresholds.deepTimeMs && deepUnconsumed >= thresholds.minSignals;
+  if (deepCountReached || deepTimeReached) return "deep";
+
+  const quickCountReached = quickUnconsumed >= thresholds.quickSignals;
+  const quickTimeReached =
+    timeSinceReflectionMs >= thresholds.quickTimeMs && quickUnconsumed >= thresholds.minSignals;
+  if (quickCountReached || quickTimeReached) return "quick";
+
+  return null;
 }
 
 /**
