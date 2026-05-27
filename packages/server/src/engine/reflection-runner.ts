@@ -4,7 +4,12 @@ import { FrameworkEngine } from "./framework-engine.js";
 import { renderFrameworksToMarkdown } from "./framework-renderer.js";
 import { buildQuickReflectionPrompt, buildDeepReflectionPrompt, buildMetaReflectionPrompt } from "./prompt-builder.js";
 import { createSnapshot } from "./snapshot-manager.js";
-import { readSignals, clearSignals } from "./signal-store.js";
+import {
+  readUnconsumed,
+  markConsumed,
+  gcFullyConsumed,
+  type ReflectionTier,
+} from "./signal-store.js";
 import { detectTensions } from "./tension-detector.js";
 import { updateMetaAfterReflection, loadMeta, getPhaseGuidance } from "./meta-optimizer.js";
 import {
@@ -195,7 +200,8 @@ export async function runReflection(
   const config = await loadConfig();
   const frameworkEngine = new FrameworkEngine();
   const store = await frameworkEngine.initialize();
-  const signals = await readSignals();
+  const reflectionId = `ref-${tier}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const signals = await readUnconsumed(tier);
 
   if (signals.length === 0) {
     return {
@@ -343,7 +349,12 @@ export async function runReflection(
   }
 
   await finalizeReflection(frameworkEngine, tier, result);
-  await clearSignals();
+  // Per-tier consumption replaces the pre-#6 unconditional `clearSignals()`
+  // wipe. mark this batch as consumed-by-tier, then GC any signal now
+  // consumed by every tier (maintainer-required, in scope of issue #6 PR).
+  await markConsumed(signals, tier, reflectionId);
+  const ALL_TIERS: ReflectionTier[] = ["quick", "deep"];
+  await gcFullyConsumed(ALL_TIERS);
 
   return result;
 }
