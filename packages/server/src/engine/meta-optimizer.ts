@@ -158,6 +158,20 @@ export function getReflectionThresholds(meta: MetaState): {
         deepTimeMs: 48 * 60 * 60 * 1000,    // 48 hours
         minSignals: 3,
       };
+    default:
+      // Disk-loaded MetaState can carry a phase value outside the declared
+      // union if the JSON has drifted (manual edit, future schema, corrupted
+      // file). Without a default branch the function returns undefined and
+      // downstream destructuring of `thresholds.minSignals` crashes the stop
+      // hook. Fall back to apprentice thresholds — most frequent reflection,
+      // least risk of starving the learning loop.
+      return {
+        quickSignals: 5,
+        deepSignals: 25,
+        quickTimeMs: 2 * 60 * 60 * 1000,
+        deepTimeMs: 12 * 60 * 60 * 1000,
+        minSignals: 3,
+      };
   }
 }
 
@@ -169,9 +183,11 @@ export function getReflectionThresholds(meta: MetaState): {
  * The B contract for issue #6 requires per-tier counts (not raw queue size)
  * because signals now persist across reflections via `consumedBy` tracking.
  *
- * Deep wins ties with quick when both cross their count threshold so the
- * higher-evidence reflection actually fires on rich evidence — that was the
- * original intent of the tier system and what pre-#6 wipe semantics defeated.
+ * Deep preempts quick in ALL scenarios where deep's own trigger fires — both
+ * its count threshold AND its time fallback — so the higher-evidence
+ * reflection runs on rich evidence whenever it qualifies. Pre-#6 wipe
+ * semantics defeated this; the tier ladder collapsed to single-tier in
+ * practice because quick always wiped before deep accumulated.
  *
  * Time fallback requires the tier's unconsumed count to meet `minSignals`,
  * which prevents a 24h-elapsed sparse-trailing trigger on near-empty state.
@@ -188,7 +204,7 @@ export function selectReflectionTier(input: {
     deepTimeMs: number;
   };
   enabled: boolean;
-}): "quick" | "deep" | null {
+}): import("../types/learning-types.js").ReflectionTier | null {
   const { quickUnconsumed, deepUnconsumed, timeSinceReflectionMs, thresholds, enabled } = input;
   if (!enabled) return null;
 

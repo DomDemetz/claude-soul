@@ -91,6 +91,7 @@ export function extractSignalsFromMessages(
       confidence,
       userSnippets: lastTwoUser,
       assistantSnippets: lastTwoAssistant,
+      consumedBy: [],
     };
   }
 

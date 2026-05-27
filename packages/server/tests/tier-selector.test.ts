@@ -93,6 +93,15 @@ describe("selectReflectionTier — B-contract trigger policy", () => {
     ).toBe("deep");
   });
 
+  it("uses the apprentice fallback when the phase enum drifts to an unknown value (no crash on disk-loaded MetaState)", async () => {
+    const { getReflectionThresholds } = await import("../src/engine/meta-optimizer.js");
+    const thresholds = getReflectionThresholds({ phase: "grandmaster-unknown" as never } as never);
+    expect(thresholds).toBeDefined();
+    expect(thresholds.minSignals).toBeGreaterThan(0);
+    expect(thresholds.quickSignals).toBeGreaterThan(0);
+    expect(thresholds.deepSignals).toBeGreaterThan(0);
+  });
+
   it("ignores time fallback when the tier's unconsumed count is below minSignals (avoids low-evidence triggers)", () => {
     expect(
       selectReflectionTier({

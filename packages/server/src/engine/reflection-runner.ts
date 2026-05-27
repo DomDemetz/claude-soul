@@ -1,4 +1,10 @@
-import type { Framework, LLMReflectionResult, TensionState } from "../types/learning-types.js";
+import crypto from "node:crypto";
+import type {
+  Framework,
+  LLMReflectionResult,
+  TensionState,
+  ReflectionTier,
+} from "../types/learning-types.js";
 import type { SoulConfig } from "../types/config-types.js";
 import { FrameworkEngine } from "./framework-engine.js";
 import { renderFrameworksToMarkdown } from "./framework-renderer.js";
@@ -8,7 +14,7 @@ import {
   readUnconsumed,
   markConsumed,
   gcFullyConsumed,
-  type ReflectionTier,
+  ALL_REFLECTION_TIERS,
 } from "./signal-store.js";
 import { detectTensions } from "./tension-detector.js";
 import { updateMetaAfterReflection, loadMeta, getPhaseGuidance } from "./meta-optimizer.js";
@@ -182,7 +188,7 @@ async function finalizeReflection(
 
 
 export type ReflectionResult = {
-  tier: "quick" | "deep" | "meta";
+  tier: ReflectionTier | "meta";
   frameworksUpdated: number;
   newFrameworks: number;
   retired: number;
@@ -195,12 +201,12 @@ export type ReflectionResult = {
 };
 
 export async function runReflection(
-  tier: "quick" | "deep",
+  tier: ReflectionTier,
 ): Promise<ReflectionResult> {
   const config = await loadConfig();
   const frameworkEngine = new FrameworkEngine();
   const store = await frameworkEngine.initialize();
-  const reflectionId = `ref-${tier}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const reflectionId = `ref-${tier}-${Date.now()}-${crypto.randomUUID()}`;
   const signals = await readUnconsumed(tier);
 
   if (signals.length === 0) {
@@ -244,6 +250,15 @@ export async function runReflection(
   const parsed = parseReflectionJson(responseText);
   if (!parsed) throw new Error("Failed to parse reflection response as JSON");
 
+  // Wrap the mutation block in try/finally so signals are marked consumed
+  // even if a per-tier write (lessons, exemplars, tension state) throws
+  // partway through. Without this, the signals stay unconsumed and the next
+  // reflection re-processes them — but `finalizeReflection` may have already
+  // committed framework evidence and bumped reflectionCount, so the next
+  // cycle would double-apply mutations against an already-updated store.
+  // We accept "lost signal credit on mid-flight failure" over "double-applied
+  // mutations after partial finalize" — the former drops some evidence, the
+  // latter corrupts framework confidence scores.
   const result: ReflectionResult = {
     tier,
     frameworksUpdated: 0,
@@ -348,13 +363,15 @@ export async function runReflection(
     result.insight = `[Phase: ${meta.phase}] ${result.insight ?? ""}`.trim();
   }
 
-  await finalizeReflection(frameworkEngine, tier, result);
-  // Per-tier consumption replaces the pre-#6 unconditional `clearSignals()`
-  // wipe. mark this batch as consumed-by-tier, then GC any signal now
-  // consumed by every tier (maintainer-required, in scope of issue #6 PR).
-  await markConsumed(signals, tier, reflectionId);
-  const ALL_TIERS: ReflectionTier[] = ["quick", "deep"];
-  await gcFullyConsumed(ALL_TIERS);
+  try {
+    await finalizeReflection(frameworkEngine, tier, result);
+  } finally {
+    // Per-tier consumption replaces the pre-#6 unconditional `clearSignals()`
+    // wipe. Runs even when finalizeReflection throws — see the rationale
+    // above the result-init block.
+    await markConsumed(signals, tier, reflectionId);
+    await gcFullyConsumed(ALL_REFLECTION_TIERS);
+  }
 
   return result;
 }

@@ -40,6 +40,10 @@ export async function statusCommand(): Promise<void> {
 
   // Signals — per-tier under B-contract (issue #6): total queue size is no
   // longer the same as "pending" because signals persist across reflections.
+  // CLI-side mirror of packages/server/src/engine/signal-store.ts#countPendingByTier.
+  // Kept in lockstep with the server copy (the CLI is a separate package and
+  // does not cross-import the server runtime; see packages/cli/src/util/atomic-write.ts
+  // for the same pattern).
   try {
     const content = await fs.readFile(path.join(DATA_DIR, "session-log.jsonl"), "utf-8");
     const lines = content.split("\n").filter((l) => l.trim());

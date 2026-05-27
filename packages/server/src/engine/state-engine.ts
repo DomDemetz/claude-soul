@@ -9,6 +9,7 @@ import {
   soulFilePath,
 } from "../util/files.js";
 import { readJsonSafe, writeJsonAtomic } from "../util/files.js";
+import { countPendingByTier } from "./signal-store.js";
 import fs from "node:fs/promises";
 import path from "node:path";
 
@@ -139,7 +140,8 @@ export class StateEngine {
 
     // B-contract (issue #6): the session log persists signals across cycles
     // with per-tier `consumedBy` markers, so total-queue size no longer maps
-    // to "pending". Break it down: total in log, pending-quick, pending-deep.
+    // to "pending". Delegate the per-tier breakdown to the shared helper so
+    // STATE.md and `claude-soul status` can't drift.
     let signalCount = 0;
     let correctionCount = 0;
     let pendingQuick = 0;
@@ -147,20 +149,11 @@ export class StateEngine {
     try {
       const logContent = await fs.readFile(SESSION_LOG_PATH, "utf8");
       const lines = logContent.split("\n").filter((l) => l.trim());
-      signalCount = lines.length;
-      correctionCount = lines.filter((l) => l.includes('"correction"')).length;
-      for (const line of lines) {
-        try {
-          const parsed = JSON.parse(line) as { consumedBy?: Array<{ tier: string }> };
-          const tiers = new Set((parsed.consumedBy ?? []).map((c) => c.tier));
-          if (!tiers.has("quick")) pendingQuick++;
-          if (!tiers.has("deep")) pendingDeep++;
-        } catch {
-          // malformed line — count as pending for both tiers (conservative)
-          pendingQuick++;
-          pendingDeep++;
-        }
-      }
+      const counts = countPendingByTier(lines);
+      signalCount = counts.total;
+      pendingQuick = counts.pendingQuick;
+      pendingDeep = counts.pendingDeep;
+      correctionCount = counts.corrections;
     } catch {
       // no signals yet
     }

@@ -20,6 +20,7 @@ function makeSignal(overrides: Partial<MicroSignal> = {}): MicroSignal {
     confidence: 0.8,
     userSnippets: [],
     assistantSnippets: [],
+    consumedBy: [],
     ...overrides,
   };
 }
@@ -60,6 +61,15 @@ describe("signal-store — filterUnconsumedByTier", () => {
 });
 
 describe("signal-store — markBatchConsumed", () => {
+  it("is idempotent on tier alone: re-marking the same tier with a different reflectionId does not add a second entry", () => {
+    const s = makeSignal({
+      consumedBy: [{ tier: "quick", reflectionId: "ref-q1", timestamp: 50 }],
+    });
+    const result = markBatchConsumed([s], [s], "quick", "ref-q2-DIFFERENT", 100);
+    expect(result[0].consumedBy).toHaveLength(1);
+    expect(result[0].consumedBy?.[0].reflectionId).toBe("ref-q1");
+  });
+
   it("adds a consumedBy entry to signals matching the consumed batch", () => {
     const s1 = makeSignal({ timestamp: 1 });
     const s2 = makeSignal({ timestamp: 2 });
@@ -67,7 +77,7 @@ describe("signal-store — markBatchConsumed", () => {
     expect(result[0].consumedBy).toEqual([
       { tier: "quick", reflectionId: "ref-1", timestamp: 100 },
     ]);
-    expect(result[1].consumedBy).toBeUndefined();
+    expect(result[1].consumedBy).toEqual([]);
   });
 
   it("preserves existing consumedBy entries when adding a new one for a different tier", () => {

@@ -15,7 +15,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { parseTranscript, extractSignalsFromMessages } from "../engine/signal-extractor.js";
-import { appendSignals, getUnconsumedCount } from "../engine/signal-store.js";
+import { appendSignals, getUnconsumedCounts } from "../engine/signal-store.js";
 import { StateEngine } from "../engine/state-engine.js";
 import { ensureDirs, loadConfig, FRAMEWORKS_PATH } from "../util/files.js";
 import { readJsonSafe } from "../util/files.js";
@@ -131,8 +131,9 @@ async function main() {
     // B-contract (issue #6): trigger logic now uses per-tier unconsumed counts
     // rather than raw queue size, so quick consuming signals doesn't starve deep.
     const config = await loadConfig();
-    const quickUnconsumed = await getUnconsumedCount("quick");
-    const deepUnconsumed = await getUnconsumedCount("deep");
+    // Single snapshot: avoids two sequential reads of the JSONL with a
+    // potential write between them, and halves the IO cost on hot path.
+    const { quick: quickUnconsumed, deep: deepUnconsumed } = await getUnconsumedCounts();
     const meta = await loadMeta();
     const thresholds = getReflectionThresholds(meta);
 
