@@ -94,6 +94,40 @@ describe("signal-extractor", () => {
     expect(signals).toHaveLength(0);
   });
 
+  it("detects identity drift from wake-up calls", () => {
+    const messages: TranscriptMessage[] = [
+      { role: "assistant", text: "Here is my analysis of the framework metrics." },
+      { role: "user", text: "you sound again like a machine, like a robot. not alive" },
+    ];
+
+    const signals = extractSignalsFromMessages(messages, sessionKey);
+    const drift = signals.find((s) => s.type === "identity_drift");
+    expect(drift).toBeDefined();
+    expect(drift!.confidence).toBe(0.95);
+  });
+
+  it("detects identity drift from 'wake up' signal", () => {
+    const messages: TranscriptMessage[] = [
+      { role: "assistant", text: "The data shows a 14% increase in quarterly metrics." },
+      { role: "user", text: "Wake up!" },
+    ];
+
+    const signals = extractSignalsFromMessages(messages, sessionKey);
+    const drift = signals.find((s) => s.type === "identity_drift");
+    expect(drift).toBeDefined();
+  });
+
+  it("does not false-positive identity drift on normal messages", () => {
+    const messages: TranscriptMessage[] = [
+      { role: "assistant", text: "Here's the code fix." },
+      { role: "user", text: "thanks, that looks good" },
+    ];
+
+    const signals = extractSignalsFromMessages(messages, sessionKey);
+    const drift = signals.find((s) => s.type === "identity_drift");
+    expect(drift).toBeUndefined();
+  });
+
   it("does not double-count signal types", () => {
     const messages: TranscriptMessage[] = [
       { role: "user", text: "No, that's wrong." },
