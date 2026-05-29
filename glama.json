@@ -1,0 +1,6 @@
+{
+  "name": "claude-soul",
+  "description": "Self-correcting learning engine for Claude Code. Extracts behavioral signals from conversations, evolves frameworks through evidence, and maintains identity across sessions. The only system with correction tracking — it learns from what it gets wrong.",
+  "category": "ai-tools",
+  "tags": ["claude-code", "memory", "learning", "identity", "behavioral-frameworks", "self-correction"]
+}
