@@ -164,13 +164,48 @@ async function main() {
       const reflectLog = `[soul] Triggering ${tier} reflection (${reason}). Phase: ${meta.phase}.\n`;
       await fs.appendFile(path.join(os.tmpdir(), "soul-hook.log"), reflectLog, "utf-8").catch(() => {});
 
-      try {
-        const result = await runReflection(tier);
-        const resultLog = `[soul] ${tier} reflection complete: ${result.frameworksUpdated} updated, ${result.newFrameworks} new, ${result.retired} retired, ${result.lessonsGenerated} lessons.\n`;
-        await fs.appendFile(path.join(os.tmpdir(), "soul-hook.log"), resultLog, "utf-8").catch(() => {});
-      } catch (reflectErr) {
-        const errLog = `[soul] ${tier} reflection failed: ${reflectErr}\n`;
-        await fs.appendFile(path.join(os.tmpdir(), "soul-hook.log"), errLog, "utf-8").catch(() => {});
+      // Lock file prevents concurrent reflections from parallel sessions.
+      // On first failure we check whether the owning PID is still alive —
+      // if not, the lock is stale (left by a crashed process) and we steal it.
+      const lockPath = path.join(os.tmpdir(), "soul-reflect.lock");
+      async function tryAcquireLock(): Promise<boolean> {
+        // Optimistic path: exclusive create succeeds immediately.
+        const direct = await fs.writeFile(lockPath, String(process.pid), { flag: "wx" })
+          .then(() => true).catch(() => false);
+        if (direct) return true;
+
+        // Failed — read the PID that holds the lock.
+        const ownerPid = parseInt(await fs.readFile(lockPath, "utf-8").catch(() => ""), 10);
+        if (!Number.isFinite(ownerPid)) return false; // unreadable/corrupt — don't steal
+
+        // Check whether the owning process is still running.
+        const ownerAlive = await new Promise<boolean>((resolve) => {
+          try { process.kill(ownerPid, 0); resolve(true); }
+          catch (e: any) { resolve(e.code !== "ESRCH"); } // ESRCH = no such process
+        });
+        if (ownerAlive) return false;
+
+        // Stale lock — delete and retry once.
+        await fs.unlink(lockPath).catch(() => {});
+        return fs.writeFile(lockPath, String(process.pid), { flag: "wx" })
+          .then(() => true).catch(() => false);
+      }
+
+      const lockAcquired = await tryAcquireLock();
+
+      if (!lockAcquired) {
+        await fs.appendFile(path.join(os.tmpdir(), "soul-hook.log"), `[soul] Reflection skipped — lock held by another process.\n`, "utf-8").catch(() => {});
+      } else {
+        try {
+          const result = await runReflection(tier);
+          const resultLog = `[soul] ${tier} reflection complete: ${result.frameworksUpdated} updated, ${result.newFrameworks} new, ${result.retired} retired, ${result.lessonsGenerated} lessons.\n`;
+          await fs.appendFile(path.join(os.tmpdir(), "soul-hook.log"), resultLog, "utf-8").catch(() => {});
+        } catch (reflectErr) {
+          const errLog = `[soul] ${tier} reflection failed: ${reflectErr}\n`;
+          await fs.appendFile(path.join(os.tmpdir(), "soul-hook.log"), errLog, "utf-8").catch(() => {});
+        } finally {
+          await fs.unlink(lockPath).catch(() => {});
+        }
       }
     }
   } catch (err) {
