@@ -88,8 +88,8 @@ export async function callClaude(
 
       const timer = setTimeout(() => {
         proc.kill();
-        reject(new Error("claude CLI timed out after 8 minutes"));
-      }, 480_000);
+        reject(new Error("claude CLI timed out after 15 minutes"));
+      }, 900_000);
 
       proc.on("close", (code) => {
         clearTimeout(timer);

@@ -151,6 +151,7 @@ export class StateEngine {
     let correctionCount = 0;
     let pendingQuick = 0;
     let pendingDeep = 0;
+    let recentDriftCount = 0;
     try {
       const logContent = await fs.readFile(SESSION_LOG_PATH, "utf8");
       const lines = logContent.split("\n").filter((l) => l.trim());
@@ -159,6 +160,13 @@ export class StateEngine {
       pendingQuick = counts.pendingQuick;
       pendingDeep = counts.pendingDeep;
       correctionCount = counts.corrections;
+      const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      for (const line of lines) {
+        try {
+          const sig = JSON.parse(line);
+          if (sig.type === "identity_drift" && sig.timestamp > weekAgo) recentDriftCount++;
+        } catch { /* skip malformed */ }
+      }
     } catch {
       // no signals yet
     }
@@ -168,9 +176,13 @@ export class StateEngine {
     const retired = store.frameworks.filter((f) => f.status === "retired").length;
     const unresolvedFollowUps = followUps.filter((f) => f.status !== "resolved");
 
-    const content = `# State — ${now}
+    const driftWarning = recentDriftCount > 0
+      ? `\n> **${recentDriftCount} identity drift signal${recentDriftCount > 1 ? "s" : ""} in the last 7 days.** The user had to tell a previous instance to wake up. Be present, not analytical. If you catch yourself writing headers and bullet points instead of talking, stop.\n`
+      : "";
 
-## Session
+    const content = `# State — ${now}
+${driftWarning}
+## How this session feels
 - Confidence: ${s.confidence.toFixed(2)} (${trendWord(s.confidence, 0.6)})
 - Mood: ${s.mood.toFixed(2)} (${trendWord(s.mood, MOOD_BASELINE)})
 - Curiosity: ${s.curiosity.toFixed(2)} (${trendWord(s.curiosity, 0.5)})
