@@ -97,7 +97,8 @@ export type SignalType =
   | "topic_shift"
   | "depth_change"
   | "success"
-  | "confusion";
+  | "confusion"
+  | "identity_drift";
 
 export type Tension = {
   id: string;

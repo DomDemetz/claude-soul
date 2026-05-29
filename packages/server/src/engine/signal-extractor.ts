@@ -55,6 +55,7 @@ const CORRECTION_PATTERN = /\bno[,\s]|\bwrong\b|actually,|not what i|that'?s not
 const GRATITUDE_PATTERN = /thanks|thank you|perfect|exactly|great work|awesome/i;
 const CONFUSION_PATTERN = /what do you mean|don'?t understand|confused|\bhuh\?/i;
 const COMPLETION_PATTERN = /\b(done|works|fixed)\b/i;
+const IDENTITY_DRIFT_PATTERN = /\b(robot|machine|sound like a|wake up|not alive|you('?re| are) off|lost .*(identity|voice|energy))\b/i;
 
 export type TranscriptMessage = {
   role: "user" | "assistant";
@@ -144,6 +145,11 @@ export function extractSignalsFromMessages(
         if (ratio > 3 || ratio < 0.3) {
           addSignal(makeSignal("depth_change", text, 0.6));
         }
+      }
+
+      // identity drift — user calling out robot mode, loss of presence
+      if (IDENTITY_DRIFT_PATTERN.test(text)) {
+        addSignal(makeSignal("identity_drift", text, 0.95));
       }
 
       // completion language tracking

@@ -122,6 +122,9 @@ async function main() {
         case "disengagement":
           stateEngine.recordEvent({ type: "negative_interaction", delta: 0.03 });
           break;
+        case "identity_drift":
+          stateEngine.recordEvent({ type: "identity_drift" });
+          break;
       }
     }
 

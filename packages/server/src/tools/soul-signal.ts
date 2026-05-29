@@ -50,6 +50,9 @@ export async function handleSoulSignal(signals: SignalInput[]): Promise<string> 
       case "topic_shift":
         stateEngine.recordEvent({ type: "novel_topic" });
         break;
+      case "identity_drift":
+        stateEngine.recordEvent({ type: "identity_drift" });
+        break;
     }
   }
 

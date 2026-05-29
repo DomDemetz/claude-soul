@@ -22,6 +22,7 @@ export type StateEvent =
   | { type: "tool_failure" }
   | { type: "successful_task"; complexity: "simple" | "complex" }
   | { type: "novel_topic" }
+  | { type: "identity_drift" }
   | { type: "idle"; hours: number };
 
 const DEFAULTS: InternalState = {
@@ -69,11 +70,11 @@ export class StateEngine {
   private state: InternalState;
 
   constructor() {
-    this.state = { ...DEFAULTS };
+    this.state = structuredClone(DEFAULTS);
   }
 
   async load(): Promise<void> {
-    this.state = await readJsonSafe<InternalState>(STATE_PATH, { ...DEFAULTS });
+    this.state = await readJsonSafe<InternalState>(STATE_PATH, structuredClone(DEFAULTS));
   }
 
   async save(): Promise<void> {
@@ -115,6 +116,10 @@ export class StateEngine {
         break;
       case "novel_topic":
         this.state.curiosity = clamp(this.state.curiosity + 0.15);
+        break;
+      case "identity_drift":
+        this.state.mood = clamp(this.state.mood - 0.15);
+        this.state.confidence = clamp(this.state.confidence - 0.15);
         break;
       default:
         break;
